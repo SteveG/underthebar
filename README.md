@@ -4,9 +4,11 @@ All I want to do is drink beer and train like an animal!
 ## About
 "Under the Bar" is a third-party client application for the Hevy workout tracking website and mobile applications.
 
-This will only be useful if you have an existing Hevy account with workout data recorded. See Hevyapp.com
+This will only be useful if you have an existing Hevy account with workout data recorded. See [Hevyapp.com](https://www.hevyapp.com/)
 
-It is not intended to have feature-parity with the official app. Currently it maintains a local copy of all of your workout data and provides some graphical analyis of that data.
+It is not intended to have feature-parity with the official app. Currently it maintains a local copy of all of your workout data and 
+provides some graphical analyis of that data. I still use the Hevy mobile app to log my workouts while at the gym, then, when back at my desk
+I use "Under the Bar" to nerd-out on my performance and progress.
 
 [Development Screenshots](https://imgur.com/a/8i9nOew)
 
@@ -22,9 +24,9 @@ Stuff I'm using to make this work for me:
 ## To run it
 Execute the python file "underthebar.py"
 - It should prompt you to log in to Hevy
-- Hopefully will then display a blank profile page
+- Hopefully it will then display a blank profile page
 - Go to settings page (bottom left gear button) and use "workouts_batch" to download your workouts
-- Should then see the local workout count increment until it matches your remote workout count
+- You should then see the local workout count increment until it matches your remote workout count
 - Use the other API buttons to download other data such as body measurements and personal records
 - Go back to profile page and it should now populate... yes?
 
