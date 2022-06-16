@@ -1,0 +1,1021 @@
+#!/usr/bin/env python3
+"""Under the Bar - Profile Page
+
+This file provides the main profile page for the application, with basic account information, a Hevy feed, calendar heat map, etc.
+"""
+
+import sys
+import json
+import os
+from pathlib import Path
+import datetime
+import calendar
+import re
+
+from PySide2.QtCore import Qt, QRect, QItemSelectionModel
+from PySide2 import QtSvg
+from PySide2.QtWidgets import (
+    QApplication,
+    QLabel,
+    QPushButton,
+    QLayout,
+    QHBoxLayout,
+    QVBoxLayout,
+    QGridLayout,
+    QWidget,
+    QListWidget,
+    QAbstractItemView,
+    QListWidgetItem,
+    QTableWidget,
+    QTableWidgetItem,
+    QHeaderView,
+    QToolButton,
+)
+from PySide2.QtGui import QPalette, QColor, QWindow
+from PySide2.QtGui import QIcon, QPixmap,QImage, QBrush, QPainter
+
+from PySide2.QtCore import Slot, Signal, QObject, QThreadPool, QRunnable
+
+import hevy_api	
+import textwrap
+	
+		
+class Profile(QWidget):
+
+	def __init__(self, color):
+		super(Profile, self).__init__()
+		self.script_folder = os.path.split(os.path.abspath(__file__))[0]
+		pagelayout = QVBoxLayout()
+		self.setLayout(pagelayout)
+		#self.setAutoFillBackground(True)
+		#palette = self.palette()
+		#palette.setColor(QPalette.Window, QColor(color))
+		#self.setPalette(palette)
+		#self.setMinimumSize(50,50)
+		
+		
+		self.pool = QThreadPool()
+		self.initialised = False
+	
+	def initialise(self):
+		#print("Drawing profile page")
+		self.deleteItemsOfLayout(self.layout())
+		
+		home_folder = str(Path.home())
+		utb_folder = home_folder + "/.underthebar"
+		session_data = {}
+		if os.path.exists(utb_folder+"/session.json"):	
+			with open(utb_folder+"/session.json", 'r') as file:
+				session_data = json.load(file)
+		else:
+			return 403
+		user_folder = utb_folder + "/user_" + session_data["user-id"]	
+		workouts_folder = user_folder + "/workouts"	
+		self.workouts_folder = user_folder + "/workouts"
+		account_data = None
+		if os.path.exists(user_folder+"/account.json"):	
+			with open(user_folder+"/account.json", 'r') as file:
+				account_data = json.load(file)
+		workoutcount_data = None
+		if os.path.exists(user_folder+"/workout_count.json"):	
+			with open(user_folder+"/workout_count.json", 'r') as file:
+				workoutcount_data = json.load(file)
+		
+		#pagelayout = QVBoxLayout()
+		toplayout = QHBoxLayout()
+		self.layout().addLayout(toplayout)
+		#self.layout().addStretch()
+
+		toplayout.addStretch()
+		piclabel = QLabel("image")
+		pixmap = QPixmap(user_folder+"/profileimage")#.scaled(250,250)
+		pixmap = self.makeProfileImage(pixmap)
+		
+		piclabel.setPixmap(pixmap)
+		piclabel.setFixedSize(250,250)
+		toplayout.addWidget(piclabel)
+	
+		detailslayout = QVBoxLayout()
+		#detailslayout.addWidget(QLabel("Details"))
+		detailsgrid = QGridLayout()
+		detailsgrid.addWidget(QLabel("<b>User name:</b>"), 0,0)
+		self.usernameLabel = QLabel(account_data["data"]["username"])
+		detailsgrid.addWidget(self.usernameLabel, 0,1)
+		detailsgrid.addWidget(QLabel("<b>Full name:</b>"), 1,0)
+		self.fullnameLabel = QLabel(account_data["data"]["full_name"])
+		detailsgrid.addWidget(self.fullnameLabel, 1,1)
+		detailsgrid.addWidget(QLabel("<b>Description:</b>"), 2,0, Qt.AlignTop)
+		self.detailLabel = QLabel(account_data["data"]["description"])
+		self.detailLabel.setWordWrap(True)
+		self.detailLabel.setFixedWidth(300)
+		detailsgrid.addWidget(self.detailLabel, 2,1)
+		detailsgrid.addWidget(QLabel("<b>Followers:</b>"), 3,0)
+		self.followersLabel = QLabel(str(account_data["data"]["follower_count"]))
+		detailsgrid.addWidget(self.followersLabel, 3,1)
+		detailsgrid.addWidget(QLabel("<b>Following:</b>"), 4,0)
+		self.followingLabel = QLabel(str(account_data["data"]["following_count"]))
+		detailsgrid.addWidget(self.followingLabel, 4,1)
+		detailsgrid.addWidget(QLabel("<b>Workout count:</b>"), 5,0)
+		
+		localWorkoutCount = len(os.listdir(self.workouts_folder))
+		self.workoutcountLabel = QLabel()#str(workoutcount_data["data"]["workout_count"]))
+		self.workoutcountLabel.setText("Remote:"+str(workoutcount_data["data"]["workout_count"])+"\tLocal:"+str(localWorkoutCount))
+		detailsgrid.addWidget(self.workoutcountLabel, 5,1)
+		
+		
+		
+		detailslayout.addLayout(detailsgrid)
+		#detailslayout.addStretch()
+		toplayout.addLayout(detailslayout)
+		toplayout.addStretch()
+		
+		
+		
+		
+		
+		# lower layout with feed and stuff
+		bottomlayout = QHBoxLayout()
+		feedlayout = QVBoxLayout()
+		feedbuttonlayout = QHBoxLayout()
+		feedbuttonlayout.setSizeConstraint(QLayout.SetMaximumSize)
+		
+		feedlabel = QtSvg.QSvgWidget(self.script_folder+"/icons/hevy-logo.svg")
+		feedlabel.setFixedWidth(80)
+		feedlabel.setFixedHeight(19)
+		self.feedreloadbutton = QPushButton()# "Reload feed")
+		self.feedreloadbutton.setIcon(self.loadIcon(self.script_folder+"/icons/arrows-rotate-solid.svg"))
+		self.feedreloadbutton.setFixedWidth(50)
+		self.feedreloadbutton.clicked.connect(self.feed_reload_button)
+		self.feedloadbutton = QPushButton()
+		self.feedloadbutton.setIcon(self.loadIcon(self.script_folder+"/icons/plus-solid.svg"))
+		self.feedloadbutton.setFixedWidth(50)
+		self.feedloadbutton.clicked.connect(self.feed_load_button)
+		feedbuttonlayout.addWidget(feedlabel)
+		feedbuttonlayout.addWidget(self.feedreloadbutton)
+		feedbuttonlayout.addWidget(self.feedloadbutton)
+		#feedbuttonlayout.addStretch(10)
+		feedlayout.addLayout(feedbuttonlayout)
+		
+		self.feedList = QListWidget()
+		self.feedList.setFixedWidth(300)
+		self.feedList.setSelectionMode(QAbstractItemView.NoSelection)
+		self.feedList.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
+		self.feedList.setAlternatingRowColors(True)
+		self.feedList.setFocusPolicy(Qt.NoFocus);
+		self.feedList.verticalScrollBar().setSingleStep(15)
+		self.feedList.verticalScrollBar().valueChanged.connect(self.feedScrollChanged) 
+		feedlayout.addWidget(self.feedList)
+		
+		bottomlayout.addLayout(feedlayout)
+		
+		bottomrightlayout = QVBoxLayout()
+		self.calendarWidget = QTableWidget(8,53)
+		self.calendarWidget.horizontalHeader().hide()
+		self.calendarWidget.horizontalHeader().setMinimumSectionSize(1)
+		#calendarWidget.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents);
+		self.calendarWidget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch);
+		self.calendarWidget.verticalHeader().hide()
+		self.calendarWidget.verticalHeader().setMinimumSectionSize(1)
+		self.calendarWidget.verticalHeader().setSectionResizeMode(QHeaderView.Stretch);
+		self.calendarWidget.setMaximumHeight(100)
+		
+		self.calendarWidget.setSelectionBehavior( QAbstractItemView.SelectItems );
+		self.calendarWidget.setSelectionMode( QAbstractItemView.SingleSelection );
+		self.calendarWidget.itemSelectionChanged.connect(self.calendar_selection)
+		bottomrightlayout.addWidget(self.calendarWidget)
+		#bottomrightlayout.addStretch()
+		
+		bottomcornerlayout = QHBoxLayout()
+
+
+		self.ownList = QListWidget()
+		self.ownList.setFixedWidth(300)
+		self.ownList.setSelectionMode(QAbstractItemView.NoSelection)
+		self.ownList.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
+		self.ownList.setAlternatingRowColors(True)
+		self.ownList.setFocusPolicy(Qt.NoFocus);
+		self.ownList.verticalScrollBar().setSingleStep(15)
+		bottomcornerlayout.addWidget(self.ownList)
+		
+		bottomcornerlayout.addStretch()
+		self.measureList = QListWidget()
+		self.measureList.setFixedWidth(300)
+		self.measureList.setSelectionMode(QAbstractItemView.NoSelection)
+		self.measureList.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
+		#self.measureList.setAlternatingRowColors(True)
+		self.measureList.setFocusPolicy(Qt.NoFocus);
+		self.measureList.verticalScrollBar().setSingleStep(15)
+		bottomcornerlayout.addWidget(self.measureList)
+		
+		bottomcornerlayout.addStretch()
+		self.recordList = QListWidget()
+		self.recordList.setFixedWidth(300)
+		self.recordList.setSelectionMode(QAbstractItemView.NoSelection)
+		self.recordList.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
+		#self.recordList.setAlternatingRowColors(True)
+		self.recordList.setFocusPolicy(Qt.NoFocus);
+		self.recordList.verticalScrollBar().setSingleStep(15)
+		bottomcornerlayout.addWidget(self.recordList)
+		
+		# Change appearance of scroll bars
+		#self.ownList.verticalScrollBar().setVisible(False)
+		self.ownList.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+		self.measureList.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+		self.recordList.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+		#self.ownList.verticalScrollBar().hide()
+		#self.ownList.verticalScrollBar().resize(2, 2)
+		
+		
+		
+		#bottomcornerlayout.addStretch()
+		
+		
+		
+		
+		
+		
+		
+		bottomrightlayout.addLayout(bottomcornerlayout)
+		
+		
+		# populate calendar with dates, starting at day 0 of 52 weeks ago TODO is this too much work for this thread?
+		cal_start_date = datetime.datetime.now().astimezone()-datetime.timedelta(weeks=52)
+		
+#		# get dates of relevant workouts
+#		fileslist = sorted(os.listdir(workouts_folder), reverse=True)
+		relevant_workout_dates = []
+#		self.relevant_workout_files = {}
+#		for file in fileslist[:9000]:
+#			match_workout = re.search('^workout_([A-Za-z0-9_-]+).json\Z',file)
+#			if match_workout:
+#				with open(workouts_folder+"/"+file, 'r') as loadfile:
+#					temp_data = json.load(loadfile)
+#					workout_date = datetime.datetime.utcfromtimestamp(temp_data["start_time"])
+#					workout_date = workout_date.replace(tzinfo=datetime.timezone.utc).astimezone()
+#					workout_date_string = workout_date.strftime("%Y-%m-%d")
+#					relevant_workout_dates.append(workout_date_string)
+#					
+#					if workout_date_string in self.relevant_workout_files.keys():
+#						self.relevant_workout_files[workout_date_string].append(file)
+#					else:
+#						self.relevant_workout_files[workout_date_string] = [file,]
+#					#print(workout_date.strftime("%Y-%m-%d"))
+#					
+#					if workout_date < (cal_start_date - datetime.timedelta(weeks=1)):
+#						break
+		
+		
+		cal_start_day = cal_start_date.isoweekday()%7
+		cal_start_date = cal_start_date-datetime.timedelta(days=cal_start_day)
+		cal_start_month = cal_start_date.month
+		cal_start_day = cal_start_date.isoweekday()%7
+		week = 0
+		day_count = 0
+		prev_day = 0
+		prev_month = -1
+		week_month_start = 0
+		colour_toggle = True
+		
+		self.calendar_link={}
+		for i in range(500):
+			this_date = cal_start_date + datetime.timedelta(days=day_count)
+			this_day = this_date.isoweekday()%7
+			if this_day < prev_day:
+				week +=1
+				if week >=53:
+					break
+			if this_date.month != prev_month:
+				#print("new month",week_month_start,week,this_day)
+				if this_day ==0:
+					if week !=0:
+						self.calendarWidget.setSpan(0, week_month_start, 1, week-week_month_start)
+					#calendarWidget.setItem(0,week_month_start,QTableWidgetItem(calendar.month_name[prev_month]))
+					self.calendarWidget.setItem(0,week,QTableWidgetItem(calendar.month_abbr[this_date.month]))
+					if colour_toggle:
+						self.calendarWidget.item(0,week).setBackground(self.palette().color(QPalette.AlternateBase))
+					else:
+						self.calendarWidget.item(0,week).setBackground(self.palette().color(QPalette.Base))
+					week_month_start = week
+				else:
+					if week != 52:
+						self.calendarWidget.setSpan(0, week_month_start, 1, week-week_month_start+1)
+						#calendarWidget.setItem(0,week_month_start,QTableWidgetItem(calendar.month_name[prev_month]))
+						self.calendarWidget.setItem(0,week+1,QTableWidgetItem(calendar.month_abbr[this_date.month]))
+						#if self.calendarWidget.item(0, week+1) != None:
+						if colour_toggle:
+							self.calendarWidget.item(0,week+1).setBackground(self.palette().color(QPalette.AlternateBase))
+						else:
+							self.calendarWidget.item(0,week+1).setBackground(self.palette().color(QPalette.Base))
+						week_month_start = week+1
+				
+				colour_toggle = not colour_toggle
+				prev_month = this_date.month
+			prev_day = this_day
+			#self.calendarWidget.setItem(this_day+1,week,QTableWidgetItem(str(this_date.day)))
+			self.calendarWidget.setItem(this_day+1,week,QTableWidgetItem())
+			if self.calendarWidget.item(this_day+1,week) == None:
+				break
+			if this_date.strftime("%Y-%m-%d") in relevant_workout_dates:
+#				self.calendarWidget.item(this_day+1,week).setBackground(self.palette().color(QPalette.ToolTipBase))
+#				self.calendar_link[(this_day+1,week)]=this_date.strftime("%Y-%m-%d")
+#				if this_date.strftime("%Y-%m-%d") == relevant_workout_dates[0]:
+#					self.calendarWidget.setCurrentCell(this_day+1,week,QItemSelectionModel.ClearAndSelect)
+#					#print("date of last workout",this_date.strftime("%Y-%m-%d"))
+				pass
+			elif colour_toggle:
+				self.calendarWidget.item(this_day+1,week).setBackground(self.palette().color(QPalette.Base))
+			else:
+				self.calendarWidget.item(this_day+1,week).setBackground(self.palette().color(QPalette.AlternateBase))
+			day_count += 1
+		self.calendarWidget.setSpan(0, week_month_start, 1, 53-week_month_start)
+		
+		
+		bottomlayout.addLayout(bottomrightlayout)
+		#bottomlayout.addStretch()
+		
+		self.layout().addLayout(bottomlayout)
+		
+		self.feed_last_index = 0
+		
+		self.initialised = True
+
+	def do_update(self):
+		print("updating")
+		if not self.initialised:
+			self.initialise()
+		else:
+			# Reload account overview bits
+			home_folder = str(Path.home())
+			utb_folder = home_folder + "/.underthebar"
+			session_data = {}
+			if os.path.exists(utb_folder+"/session.json"):	
+				with open(utb_folder+"/session.json", 'r') as file:
+					session_data = json.load(file)
+			else:
+				return 403
+			user_folder = utb_folder + "/user_" + session_data["user-id"]	
+			workouts_folder = user_folder + "/workouts"	
+			self.workouts_folder = user_folder + "/workouts"
+			account_data = None
+			if os.path.exists(user_folder+"/account.json"):	
+				with open(user_folder+"/account.json", 'r') as file:
+					account_data = json.load(file)
+				self.usernameLabel.setText(account_data["data"]["username"])
+				self.fullnameLabel.setText(account_data["data"]["full_name"])
+				self.detailLabel.setText(account_data["data"]["description"])
+				self.followersLabel.setText(str(account_data["data"]["follower_count"]))
+				self.followingLabel.setText(str(account_data["data"]["following_count"]))
+			workoutcount_data = None
+			if os.path.exists(user_folder+"/workout_count.json"):	
+				with open(user_folder+"/workout_count.json", 'r') as file:
+					workoutcount_data = json.load(file)
+				localWorkoutCount = len(os.listdir(self.workouts_folder))
+				self.workoutcountLabel.setText("Remote:"+str(workoutcount_data["data"]["workout_count"])+"\tLocal:"+str(localWorkoutCount))
+			
+			#self.workoutcountLabel.setText(str(workoutcount_data["data"]["workout_count"]))
+			
+			
+			
+			
+			
+			
+			
+			try:
+				selected_index = self.calendarWidget.selectedIndexes()[0]
+				self.calendarWidget.blockSignals(True)
+			except:
+				selected_index = None
+			self.calendarWidget.clear()
+			self.calendarWidget.clearSpans()
+			#self.calendarWidget.setCurrentCell(selected_index.row(), selected_index.column(),QItemSelectionModel.ClearAndSelect)
+			#pass
+			# Reload calendar bit
+			
+			
+			
+			# populate calendar with dates, starting at day 0 of 52 weeks ago TODO is this too much work for this thread?
+			cal_start_date = datetime.datetime.now().astimezone()-datetime.timedelta(weeks=52)
+			
+			# get dates of relevant workouts
+			fileslist = sorted(os.listdir(workouts_folder), reverse=True)
+			relevant_workout_dates = []
+			self.relevant_workout_files = {}
+			for file in fileslist[:9000]:
+				match_workout = re.search('^workout_([A-Za-z0-9_-]+).json\Z',file)
+				if match_workout:
+					with open(workouts_folder+"/"+file, 'r') as loadfile:
+						temp_data = json.load(loadfile)
+						workout_date = datetime.datetime.utcfromtimestamp(temp_data["start_time"])
+						workout_date = workout_date.replace(tzinfo=datetime.timezone.utc).astimezone()
+						workout_date_string = workout_date.strftime("%Y-%m-%d")
+						relevant_workout_dates.append(workout_date_string)
+						
+						if workout_date_string in self.relevant_workout_files.keys():
+							self.relevant_workout_files[workout_date_string].append(file)
+						else:
+							self.relevant_workout_files[workout_date_string] = [file,]
+						#print(workout_date.strftime("%Y-%m-%d"))
+						
+						if workout_date < (cal_start_date - datetime.timedelta(weeks=1)):
+							break
+			
+			
+			cal_start_day = cal_start_date.isoweekday()%7
+			cal_start_date = cal_start_date-datetime.timedelta(days=cal_start_day)
+			cal_start_month = cal_start_date.month
+			cal_start_day = cal_start_date.isoweekday()%7
+			week = 0
+			day_count = 0
+			prev_day = 0
+			prev_month = -1
+			week_month_start = 0
+			colour_toggle = True
+			
+			self.calendar_link={}
+			for i in range(380):
+				this_date = cal_start_date + datetime.timedelta(days=day_count)
+				this_day = this_date.isoweekday()%7
+				if this_day < prev_day:
+					week +=1
+					if week >=53:
+						break
+				if this_date.month != prev_month:
+					#print("new month",week_month_start,week,this_day)
+					if this_day ==0:
+						if week !=0:
+							self.calendarWidget.setSpan(0, week_month_start, 1, week-week_month_start)
+						#calendarWidget.setItem(0,week_month_start,QTableWidgetItem(calendar.month_name[prev_month]))
+						self.calendarWidget.setItem(0,week,QTableWidgetItem(calendar.month_abbr[this_date.month]))
+						self.calendar_link[(0,week)]=this_date.strftime("%Y-%m")
+						if colour_toggle:
+							self.calendarWidget.item(0,week).setBackground(self.palette().color(QPalette.AlternateBase))
+						else:
+							self.calendarWidget.item(0,week).setBackground(self.palette().color(QPalette.Base))
+						week_month_start = week
+					else:
+						if week != 52:
+							self.calendarWidget.setSpan(0, week_month_start, 1, week-week_month_start+1)
+							#calendarWidget.setItem(0,week_month_start,QTableWidgetItem(calendar.month_name[prev_month]))
+							self.calendarWidget.setItem(0,week+1,QTableWidgetItem(calendar.month_abbr[this_date.month]))
+							self.calendar_link[(0,week+1)]=this_date.strftime("%Y-%m")
+							if colour_toggle:
+								self.calendarWidget.item(0,week+1).setBackground(self.palette().color(QPalette.AlternateBase))
+							else:
+								self.calendarWidget.item(0,week+1).setBackground(self.palette().color(QPalette.Base))
+							week_month_start = week+1
+					
+					colour_toggle = not colour_toggle
+					prev_month = this_date.month
+				prev_day = this_day
+				#calendarWidget.setItem(this_day+1,week,QTableWidgetItem(str(this_date.day)))
+				self.calendarWidget.setItem(this_day+1,week,QTableWidgetItem())
+				if self.calendarWidget.item(this_day+1,week) == None:
+					break
+				if this_date.strftime("%Y-%m-%d") in relevant_workout_dates:
+					self.calendarWidget.item(this_day+1,week).setBackground(self.palette().color(QPalette.ToolTipBase))
+					self.calendar_link[(this_day+1,week)]=this_date.strftime("%Y-%m-%d")
+					if this_date.strftime("%Y-%m-%d") == relevant_workout_dates[0]:
+						self.calendarWidget.setCurrentCell(this_day+1,week,QItemSelectionModel.ClearAndSelect)
+						#print("date of last workout",this_date.strftime("%Y-%m-%d"))
+				elif colour_toggle:
+					self.calendarWidget.item(this_day+1,week).setBackground(self.palette().color(QPalette.Base))
+				else:
+					self.calendarWidget.item(this_day+1,week).setBackground(self.palette().color(QPalette.AlternateBase))
+				day_count += 1
+			self.calendarWidget.setSpan(0, week_month_start, 1, 53-week_month_start)	
+			
+			
+			self.calendarWidget.blockSignals(False)
+			if selected_index != None:
+				self.calendarWidget.setCurrentCell(selected_index.row(), selected_index.column(),QItemSelectionModel.ClearAndSelect)
+			
+			
+			
+			# Body measurements
+			# Body measurements
+			self.measureList.clear()
+			if os.path.exists(user_folder+"/body_measurements.json"):	
+				with open(user_folder+"/body_measurements.json", 'r') as file:
+					
+					measure_data = json.load(file)["data"]
+					measure_data.reverse()
+					measure_string = "\nBody Measurements\n"
+					for measure_set in measure_data:
+						measure_string += "\n"
+						the_keys = list(measure_set.keys())
+						for measurekey in the_keys[2:]:
+							if measure_set[measurekey] != None:
+								measure_string += "    " + measurekey.replace("_"," ").title() + ": " + str(measure_set[measurekey]) + "\n        "
+					self.measureList.addItem(measure_string)
+						#id_records[record["exercise_template_id"]] = [record["type"],record["record"]]
+			
+			# populate PR list
+			self.recordList.clear()
+			if os.path.exists(user_folder+"/set_personal_records.json"):	
+			
+				# get recent exercises
+				fileslist = sorted(os.listdir(workouts_folder), reverse=True)
+				self.workoutList_files = []
+				self.exercises = {}
+				self.exercisesHevyID = {}
+				counter = 0
+				for file in fileslist[:70]:
+					#if len(self.exercises) >7:
+					#	break
+					match_workout = re.search('^workout_([A-Za-z0-9_-]+).json\Z',file)
+					if match_workout:
+						with open(workouts_folder+"/"+file, 'r') as file:
+							temp_data = json.load(file)
+							workout_date = datetime.datetime.utcfromtimestamp(temp_data["start_time"])
+							workout_date = workout_date.replace(tzinfo=datetime.timezone.utc).astimezone(tz=None)
+							if counter < 20:
+								temp_index = temp_data["index"]
+								#self.recordList.addItem(temp_data["name"]+"-"+workout_date.strftime("%a %b %-d, %Y, %-I%P"))
+								
+								self.workoutList_files.append(file)
+							
+							for exercise in temp_data["exercises"]:
+								exercise_title = exercise["title"]
+								if exercise_title == "Standing Calf Raise":
+									print(workout_date)
+								if exercise_title not in self.exercises.keys():
+									self.exercises[exercise_title] = workout_date.strftime("%a %b %#d, ") + str(len(exercise["sets"])) + " sets"
+								
+								if exercise_title not in self.exercisesHevyID.keys():
+									self.exercisesHevyID[exercise_title] = exercise["exercise_template_id"]
+
+					counter += 1
+				
+				
+				
+				# PRs from hevy
+				id_records = {}
+				with open(user_folder+"/set_personal_records.json", 'r') as file:
+					records_data = json.load(file)["data"]
+					for record in records_data:
+						id_records[record["exercise_template_id"]] = [record["type"],record["record"]]
+				
+				self.recordList.addItem("\nPersonal Records")						
+				for exercise_title in sorted(self.exercises.keys()):
+					hevy_id = self.exercisesHevyID[exercise_title]
+					if hevy_id not in id_records.keys():
+						print(exercise_title)
+						fancy_string = "\n    "+exercise_title
+						fancy_string += "\n        Missing from hevy data"
+						self.recordList.addItem(fancy_string)
+						continue
+					
+					record_type = id_records[hevy_id][0]
+					record_value = id_records[hevy_id][1]
+				
+					fancy_string = "\n    "+exercise_title
+					fancy_string += "\n        " + record_type.replace("_"," ").title()+": "+str(record_value)
+					#fancy_string += "\n    Last workout: "+ self.exercises[exercise_title]
+					#fancy_string += "\n    Record type: "+ record_type
+					#fancy_string += "\n    Record value: "+ str(record_value)
+					self.recordList.addItem(fancy_string)
+			
+	
+	def deleteItemsOfLayout(self, layout):
+		if layout is not None:
+			while layout.count():
+				item = layout.takeAt(0)
+				widget = item.widget()
+				if widget is not None:
+					widget.setParent(None)
+				else:
+					self.deleteItemsOfLayout(item.layout())
+					
+	def feedScrollChanged(self, value): #https://doc.qt.io/qt-5/qabstractslider.html#valueChanged
+		if value == self.feedList.verticalScrollBar().maximum(): #if we're at the end
+			self.feed_load_button()
+	
+	def calendar_selection(self):
+		the_item = self.calendarWidget.selectedItems()[0]
+		selected_index = self.calendarWidget.selectedIndexes()[0]
+		selected_cell = (selected_index.row(), selected_index.column())
+		if selected_cell not in self.calendar_link.keys():
+			return
+			
+		the_date = self.calendar_link[selected_cell]
+		print("Selection changed",the_date)
+		
+		if selected_cell[0] == 0: # month selected
+			print("Month view!")
+			
+			workout_count = 0
+			exercises = {}
+			for key in self.relevant_workout_files.keys():
+				if key.startswith(the_date):
+					
+					#print(key)
+					#the_file = str(self.relevant_workout_files[key])
+					for file in self.relevant_workout_files[key]:
+						workout_count +=1
+						with open(self.workouts_folder+"/"+file, 'r') as loadfile:
+							temp_data = json.load(loadfile)
+							basics = self.get_basic_workout_stats(temp_data)
+							for exercise in basics.keys():
+								if exercise not in exercises.keys():
+									exercises[exercise] = basics[exercise]
+								else:
+									exercises[exercise] += basics[exercise]
+			like_count = exercises["like_count"]
+			del exercises["like_count"]
+			comment_count = exercises["comment_count"]
+			del exercises["comment_count"]
+			sorted_exercises = dict(sorted(exercises.items(), key=lambda item: item[1], reverse=True))
+			
+			fancystring = "\nMonth Summary: "+ the_date
+			fancystring += "\n\n    Workouts completed: " + str(workout_count)
+			fancystring += "\n\n    Exercises: \n"
+			for s_ex in sorted_exercises.keys():
+				fancystring += "\n        "+s_ex+": "+str(sorted_exercises[s_ex]) + " sets"
+			fancystring += "\n\n    Social: " + str(like_count) + " prop(s), " + str(comment_count) + " comment(s)"
+			self.ownList.clear()
+			self.ownList.addItem(fancystring)
+			
+		else: # single day selected
+		
+			fancystring = ""
+			for file in self.relevant_workout_files[the_date]:
+				with open(self.workouts_folder+"/"+file, 'r') as loadfile:
+					temp_data = json.load(loadfile)
+					fancystring += self.get_fancy_text(temp_data)
+					#print("\n\n"+fancystring)
+					self.ownList.clear()
+					self.ownList.addItem(fancystring)
+	
+	def get_basic_workout_stats(self, workoutjson):
+		workout = workoutjson
+		exercises = {}
+		for exercise in workout["exercises"]:
+			if exercise["title"] not in exercises.keys():
+				exercises[exercise["title"]] = len(exercise["sets"])
+			else:
+				exercises[exercise["title"]] += len(exercise["sets"])
+		exercises["like_count"] = workout["like_count"]
+		exercises["comment_count"] = workout["comment_count"]
+		return exercises
+	
+	# this is used when clicking on the calendar widget, text is shown for that workout day
+	def get_fancy_text(self, workoutjson):
+		workout = workoutjson
+		#fancystring = "\n"+workout["username"] + " - " + workout["name"]
+		fancystring = "\n"+workout["name"]
+		workout_date = datetime.datetime.utcfromtimestamp(workout["start_time"])
+		workout_date = workout_date.replace(tzinfo=datetime.timezone.utc).astimezone(tz=None)
+		
+		import platform
+		if platform.system() == "Linux":
+			fancystring += "\n" + workout_date.strftime("%a %b %-d, %Y, %-I%P, ") + str(len(workout["exercises"])) + " exercises"
+		else:
+			fancystring += "\n" + workout_date.strftime("%a %b %#d, %Y, %I%p, ") + str(len(workout["exercises"])) + " exercises"
+		
+		if workout["description"] != "":
+			stringlist = textwrap.wrap(workout["description"], width=50,initial_indent="     " ,subsequent_indent="     ")
+			fancystring += "\n"
+			for substring in stringlist:
+				fancystring += "\n"+substring
+		
+		the_superset_id = None
+		ss_string = " "
+		for exercise in workout["exercises"]:
+			if exercise["superset_id"] != None:
+				ss_string = "|"
+				if exercise["superset_id"] != the_superset_id:
+					the_superset_id = exercise["superset_id"]
+					fancystring += "\n\nSuper Set "+str(the_superset_id+1)
+				else:
+					fancystring += "\n"+ss_string
+			else:
+				ss_string = " "
+				fancystring += "\n"+ss_string
+			fancystring += "\n"+ss_string+"    " + exercise["title"]
+			
+			has_weight = False
+			has_reps = False
+			has_distance = False
+			has_duration = False
+			
+			# loop twice, first to decide format, then to write it out
+			for exercise_set in exercise["sets"]:
+				#fancystring += "\n        "+str(exercise_set["index"]+1)+":\t"
+				if exercise_set["weight_kg"] != 0 and exercise_set["weight_kg"] != None:
+					#fancystring += str(exercise_set["weight_kg"])+"kg\t"
+					has_weight = True
+				if exercise_set["reps"] != 0 and exercise_set["reps"] != None:
+					#fancystring += str(exercise_set["reps"])+" reps\t"
+					has_reps = True
+				if exercise_set["distance_meters"] != 0 and exercise_set["distance_meters"] != None:
+					#fancystring += str(exercise_set["distance_meters"])+"m\t"
+					has_distance = True
+				if exercise_set["duration_seconds"] != 0 and exercise_set["duration_seconds"] != None:
+					#fancystring += str(exercise_set["duration_seconds"])+"s\t"
+					has_duration = True
+				#print(exercise_set)
+			for exercise_set in exercise["sets"]:
+				fancystring += "\n"+ss_string+"        "+str(exercise_set["index"]+1)+":\t"
+				if has_weight:
+					fancystring += str(exercise_set["weight_kg"])+"kg\t"
+				if has_reps:
+					fancystring += str(exercise_set["reps"])+" reps\t"
+				if has_distance:
+					if exercise_set["distance_meters"] < 1000:
+						fancystring += str(exercise_set["distance_meters"])+"m\t"
+					else:
+						fancystring += str(exercise_set["distance_meters"]/1000)+"km\t"
+				if has_duration:
+					#fancystring += str(datetime.timedelta(seconds=exercise_set["duration_seconds"]))+"\t"
+					m, s = divmod(exercise_set["duration_seconds"], 60) 
+					time_format = "{:02d}:{:02d}".format(m, s) 
+					if m>59:
+						h,m = divmod(m, 60) 
+						time_format = "{:02d}:{:02d}:{:02d}".format(h, m, s) 
+					fancystring += time_format+"\t"
+				if len(exercise_set["personalRecords"])>0:
+					fancystring += "*PR*"
+		fancystring += "\n"
+		
+		fancystring += "\n     Social:  "+ str(workout["like_count"]) + " prop(s),  " + str(workout["comment_count"]) + " comment(s)"
+		for comment in workout["comments"]:
+			#print(comment)
+			#fancystring += "\n     "+comment["username"]+": " +comment["comment"]
+			fancystring += "\n"
+			stringlist = textwrap.wrap(comment["username"]+": " +comment["comment"], width=50,initial_indent="     " ,subsequent_indent="     ")
+			for substring in stringlist:
+				fancystring += "\n"+substring
+			fancystring += "\n"
+		
+		fancystring += "\n"	
+		return fancystring
+	
+	def feed_reload_button(self):
+		self.feed_last_index = 0
+		self.feedList.clear()
+		self.feed_load_button()
+		#self.feed_load_button()
+		#self.feed_load_button()
+		
+	
+	def feed_load_button(self):
+		self.feedreloadbutton.setEnabled(False)
+		self.feedloadbutton.setEnabled(False)
+		worker = MyFeedWorker(self.feed_last_index)
+		worker.emitter.done.connect(self.on_feed_worker_done)
+		self.pool.start(worker)
+	
+	@Slot(dict)
+	def on_feed_worker_done(self, returnjson):
+		# modify the UI
+		print("feed worker task completed")
+		if returnjson != 304:
+			#self.feedList.addItem(json.dumps(returnjson, indent=4, sort_keys=False))
+			for workout in returnjson["data"]["workouts"]:
+				fancystring = workout["username"] + " - " + workout["name"]
+				workout_date = datetime.datetime.utcfromtimestamp(workout["start_time"])
+				workout_date = workout_date.replace(tzinfo=datetime.timezone.utc).astimezone(tz=None)
+				import platform
+				if platform.system() == "Linux":
+					fancystring += "\n" + workout_date.strftime("%a %b %-d, ") + str(len(workout["exercises"])) + " exercises"
+				else:
+					fancystring += "\n" + workout_date.strftime("%a %b %#d, ") + str(len(workout["exercises"])) + " exercises"
+				
+				
+				the_superset_id = None
+				ss_string = ""
+				for exercise in workout["exercises"]:
+					if exercise["superset_id"] != None:
+						ss_string = "|"
+						if exercise["superset_id"] != the_superset_id:
+							the_superset_id = exercise["superset_id"]
+							fancystring += "\n\nSuper Set "+str(the_superset_id+1)
+						else:
+							fancystring += "\n"+ss_string
+					else:
+						ss_string = ""
+						fancystring += "\n"+ss_string
+					fancystring += "\n"+ss_string+"    " + exercise["title"]
+					
+					has_weight = False
+					has_reps = False
+					has_distance = False
+					has_duration = False
+					
+					# loop twice, first to decide format, then to write it out
+					for exercise_set in exercise["sets"]:
+						#fancystring += "\n        "+str(exercise_set["index"]+1)+":\t"
+						if exercise_set["weight_kg"] != 0 and exercise_set["weight_kg"] != None:
+							#fancystring += str(exercise_set["weight_kg"])+"kg\t"
+							has_weight = True
+						if exercise_set["reps"] != 0 and exercise_set["reps"] != None:
+							#fancystring += str(exercise_set["reps"])+" reps\t"
+							has_reps = True
+						if exercise_set["distance_meters"] != 0 and exercise_set["distance_meters"] != None:
+							#fancystring += str(exercise_set["distance_meters"])+"m\t"
+							has_distance = True
+						if exercise_set["duration_seconds"] != 0 and exercise_set["duration_seconds"] != None:
+							#fancystring += str(exercise_set["duration_seconds"])+"s\t"
+							has_duration = True
+						#print(exercise_set)
+					for exercise_set in exercise["sets"]:
+						fancystring += "\n"+ss_string+"        "+str(exercise_set["index"]+1)+":\t"
+						if has_weight:
+							fancystring += str(round(exercise_set["weight_kg"],2))+"kg\t"
+						if has_reps:
+							fancystring += str(exercise_set["reps"])+" reps\t"
+						if has_distance:
+							if exercise_set["distance_meters"] < 1000:
+								fancystring += str(exercise_set["distance_meters"])+"m\t"
+							else:
+								fancystring += str(exercise_set["distance_meters"]/1000)+"km\t"
+						if has_duration:
+							#fancystring += str(datetime.timedelta(seconds=exercise_set["duration_seconds"]))+"\t"
+							m, s = divmod(exercise_set["duration_seconds"], 60) 
+							time_format = "{:02d}:{:02d}".format(m, s) 
+							if m>59:
+								h,m = divmod(m, 60) 
+								time_format = "{:02d}:{:02d}:{:02d}".format(h, m, s) 
+							fancystring += time_format+"\t"
+				fancystring += "\n"
+				self.feedList.addItem(fancystring)
+				#self.feedList.addItem("")
+				
+				
+
+				
+				
+				item = QListWidgetItem()
+				internalWidget = QWidget()
+				internalLayout = QHBoxLayout()
+				likebutton = QToolButton()
+				likebutton.setIcon(self.loadIcon(self.script_folder+"/icons/thumbs-up-solid.svg"))
+				likebutton.setCheckable(True)
+				likebutton.setChecked(False)
+				
+				internalLayout.addWidget(likebutton)
+				counterLabel = QLabel(str(workout["like_count"]))
+				internalLayout.addWidget(counterLabel)
+				internalLayout.addWidget(QLabel("prop(s)"))
+				internalLayout.addStretch()
+				internalLayout.setContentsMargins(0,0,0,0)
+				internalWidget.setLayout(internalLayout)
+				#item.setWidget(internalWidget)
+				#item.setText("\n\"sick workout dude\" - a guy\n\n\"awesome!!!\" - a hot chick")
+				#item.setText(str(workout["like_count"])+ " prop(s)")
+				#item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
+				#item.setCheckState(Qt.Unchecked)
+				if workout["is_liked_by_user"]:
+					likebutton.setChecked(True)
+				item.setSizeHint(internalWidget.sizeHint())   
+				self.feedList.addItem(item)
+				self.feedList.setItemWidget(item, internalWidget)
+				
+				likebutton.clicked.connect(lambda *args, x=workout["id"], y=likebutton, z=counterLabel: self.like_button(args, x,y,z))
+				self.feed_last_index = workout["index"]
+		
+		self.feedreloadbutton.setEnabled(True)
+		self.feedloadbutton.setEnabled(True)
+	
+	def like_button(self, checked, workout_id, button, label):
+		#print(checked, workout_id, button.isChecked())
+		if button.isChecked():
+			attempt = hevy_api.like_workout(workout_id, True)
+			if attempt == 200:
+				value = int(label.text()) + 1
+				label.setText(str(value))
+			else:
+				button.setChecked(False)
+		else:
+			attempt = hevy_api.like_workout(workout_id, False)
+			if attempt == 200:
+				value = int(label.text()) - 1
+				label.setText(str(value))
+			else:
+				button.setChecked(True)
+		
+	def loadIcon(self, path):
+	
+		#QIcon qIcon;
+		#qIcon.addFile(":/Icons/images/first.svg",QSize(32,32),QIcon::Normal,QIcon::On);
+		#qIcon.addFile(":/Icons/images/second.svg",QSize(32,32),QIcon::Normal,QIcon::Off);
+
+		
+		img = QPixmap(path)
+		qp = QPainter(img)
+		qp.setCompositionMode(QPainter.CompositionMode_SourceIn)
+		# You can enter any color you want here.
+		qp.fillRect( img.rect(), QColor(self.palette().color(QPalette.Text)) ) 
+		qp.end()
+		#ic = QIcon(img)
+		ic = QIcon()
+		ic.addPixmap(img,QIcon.Normal,QIcon.On)
+		qp = QPainter(img)
+		qp.setCompositionMode(QPainter.CompositionMode_SourceIn)
+		# You can enter any color you want here.
+		qp.fillRect( img.rect(), QColor(self.palette().color(QPalette.AlternateBase)) ) 
+		qp.end()
+		#ic = QIcon(img)
+		#ic = QIcon()
+		ic.addPixmap(img,QIcon.Normal,QIcon.Off)
+		return ic
+			
+	def makeProfileImage(self,pixmap):
+		# Load image
+		image = pixmap.toImage()
+
+		# convert image to 32-bit ARGB (adds an alpha
+		# channel ie transparency factor):
+		image.convertToFormat(QImage.Format_ARGB32)
+
+		# Crop image to a square:
+		imgsize = min(image.width(), image.height())
+		rect = QRect(
+		(image.width() - imgsize) / 2,
+		(image.height() - imgsize) / 2,
+		imgsize,
+		imgsize,
+		)
+		image = image.copy(rect)
+
+		# Create the output image with the same dimensions 
+		# and an alpha channel and make it completely transparent:
+		out_img = QImage(imgsize, imgsize, QImage.Format_ARGB32)
+		out_img.fill(Qt.transparent)
+
+		# Create a texture brush and paint a circle 
+		# with the original image onto the output image:
+		brush = QBrush(image)
+
+		# Paint the output image
+		painter = QPainter(out_img)
+		painter.setBrush(brush)
+
+		# Don't draw an outline
+		painter.setPen(Qt.NoPen)
+
+		# drawing circle
+		painter.drawEllipse(0, 0, imgsize, imgsize)
+
+		# closing painter event
+		painter.end()
+
+		# Convert the image to a pixmap and rescale it. 
+		pr = QWindow().devicePixelRatio()
+		pm = QPixmap.fromImage(out_img)
+		pm.setDevicePixelRatio(pr)
+		#size *= pr
+		pm = pm.scaled(250, 250, Qt.KeepAspectRatio, 
+				       Qt.SmoothTransformation)
+		return pm
+
+class MyEmitter(QObject):
+	# setting up custom signal
+	done = Signal(dict)
+
+class MyFeedWorker(QRunnable):
+
+	def __init__(self, start_from):
+		super(MyFeedWorker, self).__init__()
+
+		self.start_from = start_from
+		self.emitter = MyEmitter()
+
+	def run(self):
+		#print(f"{self.name} api caller starting to run.")
+		returnjson = hevy_api.feed_workouts_paged(self.start_from)
+		#print(f"{self.name} api caller finishing up -> emit signal.")
+		self.emitter.done.emit(returnjson)
+
+if __name__ == "__main__":
+	app = QApplication(sys.argv)
+	
+	app.setStyle("Fusion")
+
+	# Now use a palette to switch to dark colors:
+	palette = QPalette()
+	palette.setColor(QPalette.Window, QColor(53, 53, 53))
+	palette.setColor(QPalette.WindowText, Qt.white)
+	palette.setColor(QPalette.Base, QColor(25, 25, 25))
+	palette.setColor(QPalette.AlternateBase, QColor(53, 53, 53))
+	palette.setColor(QPalette.ToolTipBase, Qt.black)
+	palette.setColor(QPalette.ToolTipText, Qt.white)
+	palette.setColor(QPalette.Text, Qt.white)
+	palette.setColor(QPalette.Button, QColor(53, 53, 53))
+	palette.setColor(QPalette.ButtonText, Qt.white)
+	palette.setColor(QPalette.BrightText, Qt.red)
+	palette.setColor(QPalette.Link, QColor(42, 130, 218))
+	palette.setColor(QPalette.Highlight, QColor(42, 130, 218))
+	palette.setColor(QPalette.HighlightedText, Qt.black)
+	app.setPalette(palette)
+	
+	
+	
+
+	window = Profile("red")
+	window.do_update()
+	#window.setFixedSize(800,600)
+	window.resize(1200,800)
+	window.show()
+
+	app.exec_()
