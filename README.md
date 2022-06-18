@@ -61,3 +61,9 @@ Graphs are saved as images in the user data folder. To redraw when you have new 
 
 Sure, dynamic and interactive graphs would be better... but this works for me for now.
 
+## Notes for self
+pyinstaller
+- Had to add this to one plot file to get matplotlib to work correctly, error about including svg engine.
+    - import matplotlib
+    - matplotlib.use("svg")
+- pyinstaller --onefile --windowed --icons=icons\dumbbell-solid.ico --add-data="icons;icons" underthebar.py

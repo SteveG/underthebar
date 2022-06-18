@@ -8,11 +8,14 @@ Currently I only use body weight so not entirely sure how well this will work.
 
 import json
 import os
-
-import matplotlib.pyplot as plt
 import datetime as dt
-
 from pathlib import Path
+import matplotlib.pyplot as plt
+# this import is to make pyinstaller import matplotlib properly...
+import matplotlib
+matplotlib.use("svg")
+
+
 
 # INIT
 def generate_options_body_measures():
