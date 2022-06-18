@@ -22,7 +22,7 @@ Stuff I'm using to make this work for me:
 - Font Awesome icons
 
 ## To run it
-Execute the python file "underthebar.py"
+Execute the python file "underthebar.py" (Windows users can download latest pre-built [release](https://github.com/SteveG/underthebar/releases) and run that)
 - It should prompt you to log in to Hevy
 - Hopefully it will then display a blank profile page
 - Go to settings page (bottom left gear button) and use "workouts_batch" to download your workouts
