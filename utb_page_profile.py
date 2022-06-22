@@ -80,6 +80,16 @@ class Profile(QWidget):
 		if os.path.exists(user_folder+"/workout_count.json"):	
 			with open(user_folder+"/workout_count.json", 'r') as file:
 				workoutcount_data = json.load(file)
+		# here we are going to get the preferred units of the user
+		if os.path.exists(user_folder+"/user_preferences.json"):
+			with open(user_folder+"/user_preferences.json", 'r') as file:	
+				preference_data = json.load(file)
+			self.weight_unit = preference_data["data"]["weight_unit"]
+			self.distance_unit = preference_data["data"]["distance_unit"]
+			self.body_measurement_unit = preference_data["data"]["body_measurement_unit"]
+		else:
+			self.weight_unit = "kg"
+		
 		
 		#pagelayout = QVBoxLayout()
 		toplayout = QHBoxLayout()
@@ -371,7 +381,15 @@ class Profile(QWidget):
 					workoutcount_data = json.load(file)
 				localWorkoutCount = len(os.listdir(self.workouts_folder))
 				self.workoutcountLabel.setText("Remote:"+str(workoutcount_data["data"]["workout_count"])+"\tLocal:"+str(localWorkoutCount))
-			
+			# here we are going to get the preferred units of the user
+			if os.path.exists(user_folder+"/user_preferences.json"):
+				with open(user_folder+"/user_preferences.json", 'r') as file:	
+					preference_data = json.load(file)
+				self.weight_unit = preference_data["data"]["weight_unit"]
+				self.distance_unit = preference_data["data"]["distance_unit"]
+				self.body_measurement_unit = preference_data["data"]["body_measurement_unit"]
+			else:
+				self.weight_unit = "kg"
 			#self.workoutcountLabel.setText(str(workoutcount_data["data"]["workout_count"]))
 			
 			
@@ -505,7 +523,13 @@ class Profile(QWidget):
 						the_keys = list(measure_set.keys())
 						for measurekey in the_keys[2:]:
 							if measure_set[measurekey] != None:
-								measure_string += "    " + measurekey.replace("_"," ").title() + ": " + str(measure_set[measurekey]) + "\n        "
+								if measurekey == "weight_kg" and self.weight_unit=="lbs":
+									lb = round(measure_set[measurekey]*2.20462262,2)
+									if lb.is_integer():
+										lb = int(lb)
+									measure_string += "    " + "Weight Lb" +": "+ str(lb) + "\n        "
+								else:
+									measure_string += "    " + measurekey.replace("_"," ").title() +": "+ str(measure_set[measurekey]) + "\n        "
 					self.measureList.addItem(measure_string)
 						#id_records[record["exercise_template_id"]] = [record["type"],record["record"]]
 			
@@ -569,7 +593,13 @@ class Profile(QWidget):
 					record_value = id_records[hevy_id][1]
 				
 					fancy_string = "\n    "+exercise_title
-					fancy_string += "\n        " + record_type.replace("_"," ").title()+": "+str(record_value)
+					if record_type == "best_weight" and self.weight_unit == "lbs":
+						lb = round(record_value*2.20462262,2)
+						if lb.is_integer():
+							lb = int(lb)
+						fancy_string += "\n        " + "Best Weight"+": "+str(lb)
+					else:
+						fancy_string += "\n        " + record_type.replace("_"," ").title()+": "+str(record_value)
 					#fancy_string += "\n    Last workout: "+ self.exercises[exercise_title]
 					#fancy_string += "\n    Record type: "+ record_type
 					#fancy_string += "\n    Record value: "+ str(record_value)
@@ -717,7 +747,13 @@ class Profile(QWidget):
 			for exercise_set in exercise["sets"]:
 				fancystring += "\n"+ss_string+"        "+str(exercise_set["index"]+1)+":\t"
 				if has_weight:
-					fancystring += str(exercise_set["weight_kg"])+"kg\t"
+					if self.weight_unit == "lbs":
+						lb = round(exercise_set["weight_kg"]*2.20462262,2)
+						if lb.is_integer():
+							lb = int(lb)
+						fancystring += str(lb)+"lb\t"
+					else:
+						fancystring += str(exercise_set["weight_kg"])+"kg\t"
 				if has_reps:
 					fancystring += str(exercise_set["reps"])+" reps\t"
 				if has_distance:
@@ -821,7 +857,13 @@ class Profile(QWidget):
 					for exercise_set in exercise["sets"]:
 						fancystring += "\n"+ss_string+"        "+str(exercise_set["index"]+1)+":\t"
 						if has_weight:
-							fancystring += str(round(exercise_set["weight_kg"],2))+"kg\t"
+							if self.weight_unit == "lbs":
+								lb = round(exercise_set["weight_kg"]*2.20462262,2)
+								if lb.is_integer():
+									lb = int(lb)
+								fancystring += str(lb)+"lbs\t"
+							else:
+								fancystring += str(round(exercise_set["weight_kg"],2))+"kg\t"
 						if has_reps:
 							fancystring += str(exercise_set["reps"])+" reps\t"
 						if has_distance:

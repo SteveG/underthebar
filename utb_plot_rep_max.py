@@ -178,23 +178,24 @@ def generate_plot_rep_max(the_exercise, width, height):
 	fig, ax1 = plt.subplots()
 
 	ax1.step(x_repmax1, repmax1_data, where='post', label='1RM', alpha=0.8)
-	ax1.text(x_repmax1[-1], repmax1_data[-1], repmax1_data[-1],fontsize=7,alpha=0.5)
+	ax1.text(x_repmax1[-1], repmax1_data[-1], str(repmax1_data[-1])+" / "+str(int(repmax1_data[-1]*2.20462262)),fontsize=7,alpha=0.5)
 	ax1.step(x_repmax3, repmax3_data, where='post', label='3RM', alpha=0.8)
-	ax1.text(x_repmax3[-1], repmax3_data[-1], repmax3_data[-1],fontsize=7,alpha=0.5)
+	ax1.text(x_repmax3[-1], repmax3_data[-1], str(repmax3_data[-1])+" / "+str(int(repmax3_data[-1]*2.20462262)),fontsize=7,alpha=0.5)
 	ax1.step(x_repmax5, repmax5_data, where='post', label='5RM', alpha=0.8)
-	ax1.text(x_repmax5[-1], repmax5_data[-1], repmax5_data[-1],fontsize=7,alpha=0.5)
+	ax1.text(x_repmax5[-1], repmax5_data[-1], str(repmax5_data[-1])+" / "+str(int(repmax5_data[-1]*2.20462262)),fontsize=7,alpha=0.5)
 	ax1.step(x_repmax10, repmax10_data, where='post', label='10RM', alpha=0.8)
-	ax1.text(x_repmax10[-1], repmax10_data[-1], repmax10_data[-1],fontsize=7,alpha=0.5)
+	ax1.text(x_repmax10[-1], repmax10_data[-1], str(repmax10_data[-1])+" / "+str(int(repmax10_data[-1]*2.20462262)),fontsize=7,alpha=0.5)
 	ax1.bar(x_barchart,barchart_data,alpha=0.5,width=2)
 	
 	# Show scale on both sides
 	ax2 = ax1.twinx()
-	ax2.set_ylim(ax1.get_ylim())
+	#ax2.set_ylim(ax1.get_ylim())
+	ax2.set_ylim(ax1.get_ylim()[0]*2.20462262,ax1.get_ylim()[1]*2.20462262)
 
 	
 	#Plot formatting
 	ax1.legend(loc='lower right')
-	plt.title(the_exercise+' Rep Max Record')
+	plt.title(the_exercise+' Rep Max Record (kg/lb)')
 	ax1.set_xlabel("Generated "+str(dt.datetime.now())[:16], fontsize=8)
 	fig1 = plt.gcf()
 	size=fig1.get_size_inches()
