@@ -9,6 +9,7 @@ import json
 import os
 from pathlib import Path
 import datetime
+import time
 import calendar
 import re
 
@@ -63,6 +64,13 @@ class Profile(QWidget):
 		
 		home_folder = str(Path.home())
 		utb_folder = home_folder + "/.underthebar"
+		# workout image stuff, set folder, delete old images
+		img_folder = str(Path.home())+ "/.underthebar/temp/"
+		if not os.path.exists(img_folder):
+			os.makedirs(img_folder)
+		for f in os.listdir(img_folder):
+			if os.stat(os.path.join(img_folder,f)).st_mtime < time.time() - 14 * 86400:
+				os.remove(os.path.join(img_folder,f))
 		session_data = {}
 		if os.path.exists(utb_folder+"/session.json"):	
 			with open(utb_folder+"/session.json", 'r') as file:
@@ -615,10 +623,7 @@ class Profile(QWidget):
 					widget.setParent(None)
 				else:
 					self.deleteItemsOfLayout(item.layout())
-					
-	def feedScrollChanged(self, value): #https://doc.qt.io/qt-5/qabstractslider.html#valueChanged
-		if value == self.feedList.verticalScrollBar().maximum(): #if we're at the end
-			self.feed_load_button()
+
 	
 	def calendar_selection(self):
 		the_item = self.calendarWidget.selectedItems()[0]
@@ -773,11 +778,10 @@ class Profile(QWidget):
 					fancystring += "*PR*"
 		fancystring += "\n"
 		
-		fancystring += "\n     Social:  "+ str(workout["like_count"]) + " prop(s),  " + str(workout["comment_count"]) + " comment(s)"
+		fancystring += "\n     Social:  "+ str(workout["like_count"]) + " prop(s),  " + str(workout["comment_count"]) + " comment(s)\n"
 		for comment in workout["comments"]:
 			#print(comment)
 			#fancystring += "\n     "+comment["username"]+": " +comment["comment"]
-			fancystring += "\n"
 			stringlist = textwrap.wrap(comment["username"]+": " +comment["comment"], width=50,initial_indent="     " ,subsequent_indent="     ")
 			for substring in stringlist:
 				fancystring += "\n"+substring
@@ -785,7 +789,11 @@ class Profile(QWidget):
 		
 		fancystring += "\n"	
 		return fancystring
-	
+						
+	def feedScrollChanged(self, value): #https://doc.qt.io/qt-5/qabstractslider.html#valueChanged
+		if value >= self.feedList.verticalScrollBar().maximum()-1000 and self.feedloadbutton.isEnabled(): #if we're at the end
+			self.feed_load_button()
+			
 	def feed_reload_button(self):
 		self.feed_last_index = 0
 		self.feedList.clear()
@@ -897,8 +905,18 @@ class Profile(QWidget):
 				
 				internalLayout.addWidget(likebutton)
 				counterLabel = QLabel(str(workout["like_count"]))
+				#counterLabel.setToolTip('<img src="https://b.thumbs.redditmedia.com/wjrOwbynl7LAxh4UACgPS4MBu3vjUXanM_NBsxixtys.jpg" width="100">')
+				#counterLabel.setToolTip('<img src="test.jpg" width="400">')
 				internalLayout.addWidget(counterLabel)
 				internalLayout.addWidget(QLabel("prop(s)"))
+				# add the workout pics
+				for img_url in workout["image_urls"]:
+					filename = img_url.split("/")[-1]
+					img_folder = str(Path.home())+ "/.underthebar/temp/"
+					if os.path.exists(img_folder+filename):
+						pic_label = QLabel("Picture ")
+						pic_label.setToolTip('<img src="'+img_folder+filename+'" width="400">')
+						internalLayout.addWidget(pic_label)
 				internalLayout.addStretch()
 				internalLayout.setContentsMargins(0,0,0,0)
 				internalWidget.setLayout(internalLayout)
@@ -922,19 +940,17 @@ class Profile(QWidget):
 	def like_button(self, checked, workout_id, button, label):
 		#print(checked, workout_id, button.isChecked())
 		if button.isChecked():
-			attempt = hevy_api.like_workout(workout_id, True)
-			if attempt == 200:
-				value = int(label.text()) + 1
-				label.setText(str(value))
-			else:
-				button.setChecked(False)
+			worker = LikeWorker(label, workout_id)
+			worker.emitter.done.connect(self.on_like_worker_done)
+			self.pool.start(worker)	
 		else:
-			attempt = hevy_api.like_workout(workout_id, False)
-			if attempt == 200:
-				value = int(label.text()) - 1
-				label.setText(str(value))
-			else:
-				button.setChecked(True)
+			button.setChecked(True) # don't allow unliking
+
+	@Slot(QLabel)
+	def on_like_worker_done(self, the_label):
+		if the_label != None:
+			value = int(the_label.text()) + 1
+			the_label.setText(str(value))
 		
 	def loadIcon(self, path):
 	
@@ -1028,6 +1044,26 @@ class MyFeedWorker(QRunnable):
 		returnjson = hevy_api.feed_workouts_paged(self.start_from)
 		#print(f"{self.name} api caller finishing up -> emit signal.")
 		self.emitter.done.emit(returnjson)
+
+class LikeEmitter(QObject):
+	# setting up custom signal
+	done = Signal(QLabel)
+
+class LikeWorker(QRunnable):
+
+	def __init__(self, the_label, workout_id):
+		super(LikeWorker, self).__init__()
+
+		self.the_label = the_label
+		self.workout_id = workout_id
+		self.emitter = LikeEmitter()
+
+	def run(self):
+		returnstatus = hevy_api.like_workout(self.workout_id, True)
+		if returnstatus == 200:
+			self.emitter.done.emit(self.the_label)
+		else:
+			self.emitter.done.emit(None)
 
 if __name__ == "__main__":
 	app = QApplication(sys.argv)

@@ -14,6 +14,7 @@ import datetime
 import shutil
 
 from pathlib import Path
+import concurrent.futures 
 
 # Basic headers to use throughout
 BASIC_HEADERS = {
@@ -42,6 +43,7 @@ def login(user, password):
 
 	if not os.path.exists(utb_folder):
 		os.makedirs(utb_folder)
+		os.makedirs(utb_folder+"/temp")
 
 	headers = BASIC_HEADERS.copy()
 	
@@ -334,6 +336,15 @@ def feed_workouts_paged(start_from):
 	user_folder = user_data[1]
 	auth_token = user_data[2]
 	
+	# workout image stuff, set folder, delete old images
+	img_folder = str(Path.home())+ "/.underthebar/temp/"
+	if not os.path.exists(img_folder):
+		os.makedirs(img_folder)
+	# its probably a bit much to do this every time, I'll put it somewhere else.
+	#for f in os.listdir(img_folder):
+	#	if os.stat(os.path.join(img_folder,f)).st_mtime < time.time() - 14 * 86400:
+	#		os.remove(os.path.join(img_folder,f))
+			
 	# Make the headers
 	headers = BASIC_HEADERS.copy()
 	headers["auth-token"] = auth_token
@@ -350,10 +361,35 @@ def feed_workouts_paged(start_from):
 	
 		data = r.json()
 		new_data = {"data":data, "Etag":r.headers['Etag']}
+		
+		# this bit is for downloading feed workout images, request in parallel
+		img_urls = []
+		for workout in data["workouts"]:
+			for img_url in workout["image_urls"]:
+				img_urls.append(img_url)
+		
+		with concurrent.futures.ThreadPoolExecutor() as exector : 
+			exector.map(download_img, img_urls)
+				
 		return new_data
 	
 	elif r.status_code == 304:
 		return 304
+
+
+def download_img(img_url):
+	try:
+		img_folder = str(Path.home())+ "/.underthebar/temp/"
+		file_name = img_url.split("/")[-1]
+		print("start_img: "+file_name)
+		if not os.path.exists(img_folder+file_name):
+			response = requests.get(img_url, stream=True)
+			with open(img_folder+file_name, 'wb') as out_file:
+				shutil.copyfileobj(response.raw, out_file)
+			del response
+		print("end_img: "+file_name)
+	except Exception as e:
+		print(e)
 
 #	
 # Likes, or unlikes, a workout with the given id	
