@@ -913,10 +913,10 @@ class Profile(QWidget):
 				for img_url in workout["image_urls"]:
 					filename = img_url.split("/")[-1]
 					img_folder = str(Path.home())+ "/.underthebar/temp/"
-					if os.path.exists(img_folder+filename):
-						pic_label = QLabel("Picture ")
-						pic_label.setToolTip('<img src="'+img_folder+filename+'" width="400">')
-						internalLayout.addWidget(pic_label)
+					#if os.path.exists(img_folder+filename): # following three lines were under this if, but now image might not be downloaded immediately
+					pic_label = QLabel("Picture ")
+					pic_label.setToolTip('<img src="'+img_folder+filename+'" width="400">')
+					internalLayout.addWidget(pic_label)
 				internalLayout.addStretch()
 				internalLayout.setContentsMargins(0,0,0,0)
 				internalWidget.setLayout(internalLayout)

@@ -368,8 +368,11 @@ def feed_workouts_paged(start_from):
 			for img_url in workout["image_urls"]:
 				img_urls.append(img_url)
 		
-		with concurrent.futures.ThreadPoolExecutor() as exector : 
-			exector.map(download_img, img_urls)
+		#with concurrent.futures.ThreadPoolExecutor() as exector : 
+		#	exector.map(download_img, img_urls)
+		# above 2 lines waited for threads to complete, this just starts them and carries on.
+		exector =  concurrent.futures.ThreadPoolExecutor() 
+		exector.map(download_img, img_urls)
 				
 		return new_data
 	
