@@ -9,7 +9,7 @@ import os
 import re
 import matplotlib.pyplot as plt
 import datetime as dt
-
+from collections import Counter
 from pathlib import Path
 # INIT
 
@@ -51,6 +51,14 @@ def generate_options_volume_month():
 	filename = user_folder+'/plot_volumemonth_all.svg'
 	exists = os.path.exists(filename)
 	exercises_available["--All--"] = exists
+	# add the all exercises option
+	filename = user_folder+'/plot_volumemonth_all_bodypart.svg'
+	exists = os.path.exists(filename)
+	exercises_available["--All-- (1. Body part)"] = exists
+	# add the all exercises option
+	filename = user_folder+'/plot_volumemonth_all_bodypartprop.svg'
+	exists = os.path.exists(filename)
+	exercises_available["--All-- (2. Body part prop)"] = exists
 	
 	for user_file in user_files:
 		f = open(workouts_folder+"/"+user_file)
@@ -119,27 +127,34 @@ def generate_plot_volume_month(the_exercise, width, height):
 		
 		relevant_set_groups = []
 		for set_group in workout_data['exercises']:
-			if set_group["title"] == the_exercise or (the_exercise=="--All--" and set_group["exercise_type"] == "weight_reps"):
+			if set_group["title"] == the_exercise or (the_exercise.startswith("--All--") and set_group["exercise_type"] == "weight_reps"):
 				relevant_set_groups.append(set_group)
 			
 		if len(relevant_set_groups)>0:
 			exercise_to_track_workouts[workout_date] = relevant_set_groups
 	print(len(exercise_to_track_workouts.keys()),"relevant user workouts to process")
 
-	# Go through each set group of each workout to find total reps for the workout
+	# Go through each set group of each workout to find total volume for the workout
 	exercise_to_track_data = {}
 	exercise_to_track_data_month = {}
+	bodypart_track_data_month = {}
+	bodypart_counter = Counter()
 	for workout_date in exercise_to_track_workouts.keys():
 		repcount = 0
-		
+		workout_bodypart_counter = Counter()
 		for set_group in exercise_to_track_workouts[workout_date]:
+			#print(set_group["muscle_group"])
 			for workout_set in set_group['sets']:
 				reps = workout_set["reps"] * workout_set["weight_kg"]
 				if set_group["equipment_category"] == "dumbbell":
 					reps = reps * 2
 				
 				repcount += reps
+				bodypart_counter.update({set_group["muscle_group"]:reps})
+				workout_bodypart_counter.update({set_group["muscle_group"]:reps})
+		
 		#print("workout:",workout_date,repmax1,repmax3,repmax5,repmax10)
+		#print(repcount,workout_bodypart_counter.total())
 		exercise_to_track_data[workout_date]=repcount
 		
 		# month totals
@@ -147,8 +162,13 @@ def generate_plot_volume_month(the_exercise, width, height):
 		workout_month = workout_month.replace(day=1).date()
 		if workout_month in exercise_to_track_data_month.keys():
 			exercise_to_track_data_month[workout_month] += repcount
+			bodypart_track_data_month[workout_month].update(workout_bodypart_counter)
 		else:
 			exercise_to_track_data_month[workout_month] = repcount
+			bodypart_track_data_month[workout_month] = workout_bodypart_counter
+		#print(exercise_to_track_data_month[workout_month],bodypart_track_data_month[workout_month].total())
+	
+	
 
 	#sys.exit()
 	# Now re go through each workout in consecutive order to build cumulative chart
@@ -163,6 +183,15 @@ def generate_plot_volume_month(the_exercise, width, height):
 		repcount_dates.append(workout_key)
 		barchart_dates.append(workout_key)
 		barchart_data.append(exercise_to_track_data[workout_key])
+		
+		
+			
+	#bodypart stuff
+	#print(bodypart_counter)
+	bodypart_list = sorted(list(bodypart_counter))
+	bodypart_arrays = []
+	for x in range(len(bodypart_list)):
+		bodypart_arrays.append([])	
 
 	# do it for the months
 	monthchart_dates = []
@@ -170,6 +199,25 @@ def generate_plot_volume_month(the_exercise, width, height):
 	for month_key in sorted(exercise_to_track_data_month.keys()):
 		monthchart_dates.append(month_key)
 		monthchart_data.append(exercise_to_track_data_month[month_key])
+		
+		#bodypart stuff
+		sumbody = 0
+		for x in range(len(bodypart_list)):
+			#bodypart_arrays[x].append(bodypart_track_data_month[month_key][bodypart_list[x]])
+			#print(bodypart_track_data_month[month_key][bodypart_list[x]])
+			sumbody += bodypart_track_data_month[month_key][bodypart_list[x]]
+			if the_exercise == "--All-- (2. Body part prop)":
+				#proportionate 
+				if bodypart_track_data_month[month_key].total() == 0:
+					bodypart_arrays[x].append(0)
+				else:
+					proportion = float(bodypart_track_data_month[month_key][bodypart_list[x]]) / float(bodypart_track_data_month[month_key].total())
+					bodypart_arrays[x].append(proportion)
+			else:
+				bodypart_arrays[x].append(bodypart_track_data_month[month_key][bodypart_list[x]])
+			
+		print(monthchart_data[-1],sumbody)
+
 
 	#Create dates for each series x axis
 	x_repcount = [dt.datetime.fromtimestamp(d, dt.timezone.utc).date() for d in repcount_dates]
@@ -187,7 +235,29 @@ def generate_plot_volume_month(the_exercise, width, height):
 	ax1.text(x_repcount[-1], repcount_data[-1], int(repcount_data[-1]),fontsize=7,alpha=0.5)
 
 	#ax2.bar(x_barchart,barchart_data,alpha=0.5,width=2)
-	ax2.bar(monthchart_dates,monthchart_data,alpha=0.5,width=25,align='edge')
+	#ax2.bar(monthchart_dates,monthchart_data,alpha=0.5,width=25,align='edge')
+	
+	
+	if the_exercise == "--All-- (1. Body part)" or the_exercise == "--All-- (2. Body part prop)":
+		#bodypart stuff
+		barbottom = [0] * len(bodypart_arrays[0])
+		
+		for x in range(len(bodypart_list)):
+			print("lengths",len(barbottom), len(bodypart_arrays[x]))
+			ax2.bar(monthchart_dates,bodypart_arrays[x],width=25,align='edge',bottom=barbottom,label=bodypart_list[x])
+			c=[]
+			for y in range(len(bodypart_arrays[0])):
+				c.append(barbottom[y]+bodypart_arrays[x][y])
+			barbottom = c
+	#		if x==0:
+	#			ax2.bar(monthchart_dates,bodypart_arrays[x],width=25,align='edge',label=bodypart_list[x])
+	#		else:
+	#			ax2.bar(monthchart_dates,bodypart_arrays[x],width=25,align='edge',bottom=bodypart_arrays[x-1],label=bodypart_list[x])
+		#ax2.legend(loc='upper left')
+		handles, labels = ax2.get_legend_handles_labels()
+		ax2.legend(reversed(handles), reversed(labels), loc='upper left')
+	else:
+		ax2.bar(monthchart_dates,monthchart_data,alpha=0.5,width=25,align='edge')
 
 	#Plot formatting
 	ax1.legend(loc='lower right')
@@ -204,6 +274,10 @@ def generate_plot_volume_month(the_exercise, width, height):
 	# Write to a folder change png to svg if want that
 	if the_exercise == "--All--":
 		the_exercise = "all"
+	elif the_exercise == "--All-- (1. Body part)":
+		the_exercise = "all_bodypart"
+	elif the_exercise == "--All-- (2. Body part prop)":
+		the_exercise = "all_bodypartprop"
 	
 	export_folder = user_folder
 	fig1.savefig(export_folder+'/plot_volumemonth_'+re.sub(r'\W+', '', the_exercise)+'.svg', dpi=100)

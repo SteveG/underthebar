@@ -248,7 +248,11 @@ class Analysis(QWidget):
 			utb_plot_volume_month.generate_plot_volume_month(optionSelected, self.svgWidget.width(), self.svgWidget.height())
 			filename = "plot_volumemonth_"+re.sub(r'\W+', '', optionSelected)+'.svg'	
 			if optionSelected == "--All--":
-				filename = "plot_volumemonth_all.svg"
+				filename = "plot_volumemonth_all.svg"	
+			elif optionSelected == "--All-- (1. Body part)":
+				filename = "plot_volumemonth_all_bodypart.svg"
+			elif optionSelected == "--All-- (2. Body part prop)":
+				filename = "plot_volumemonth_all_bodypartprop.svg"
 			if os.path.exists(self.user_folder+"/"+filename):	
 				self.svgWidget.load(self.user_folder+"/"+filename)
 				self.optionList.currentItem().setCheckState(Qt.Checked)
@@ -531,6 +535,10 @@ class Analysis(QWidget):
 				filename = "plot_volumemonth_"+re.sub(r'\W+', '', selectedItemText)+'.svg'	
 				if selectedItemText == "--All--":
 					filename = "plot_volumemonth_all.svg"
+				elif selectedItemText == "--All-- (1. Body part)":
+					filename = "plot_volumemonth_all_bodypart.svg"
+				elif selectedItemText == "--All-- (2. Body part prop)":
+					filename = "plot_volumemonth_all_bodypartprop.svg"
 				if os.path.exists(self.user_folder+"/"+filename):	
 					self.svgWidget.load(self.user_folder+"/"+filename)
 				else:
