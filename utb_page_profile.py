@@ -805,14 +805,18 @@ class Profile(QWidget):
 	def feed_load_button(self):
 		self.feedreloadbutton.setEnabled(False)
 		self.feedloadbutton.setEnabled(False)
-		worker = MyFeedWorker(self.feed_last_index)
-		worker.emitter.done.connect(self.on_feed_worker_done)
+		start_index = self.feed_last_index + 0
+		worker = MyFeedWorker(start_index)
+		
+		### The line below was creating a segmentation fault, found this: https://stackoverflow.com/questions/29123171/segmentation-fault-when-connecting-a-signal-and-a-slot
+		#worker.emitter.done.connect(self.on_feed_worker_done)
+		self.workemit = worker.emitter
+		self.workemit.done.connect(self.on_feed_worker_done)
 		self.pool.start(worker)
 	
 	@Slot(dict)
 	def on_feed_worker_done(self, returnjson):
 		# modify the UI
-		print("feed worker task completed")
 		if returnjson != 304:
 			#self.feedList.addItem(json.dumps(returnjson, indent=4, sort_keys=False))
 			for workout in returnjson["data"]["workouts"]:
@@ -888,6 +892,7 @@ class Profile(QWidget):
 								time_format = "{:02d}:{:02d}:{:02d}".format(h, m, s) 
 							fancystring += time_format+"\t"
 				fancystring += "\n"
+				
 				self.feedList.addItem(fancystring)
 				#self.feedList.addItem("")
 				
@@ -930,6 +935,7 @@ class Profile(QWidget):
 				item.setSizeHint(internalWidget.sizeHint())   
 				self.feedList.addItem(item)
 				self.feedList.setItemWidget(item, internalWidget)
+				
 				
 				likebutton.clicked.connect(lambda *args, x=workout["id"], y=likebutton, z=counterLabel: self.like_button(args, x,y,z))
 				self.feed_last_index = workout["index"]
@@ -1015,6 +1021,7 @@ class Profile(QWidget):
 		# drawing circle
 		painter.drawEllipse(0, 0, imgsize, imgsize)
 
+
 		# closing painter event
 		painter.end()
 
@@ -1036,13 +1043,11 @@ class MyFeedWorker(QRunnable):
 	def __init__(self, start_from):
 		super(MyFeedWorker, self).__init__()
 
-		self.start_from = start_from
+		self.start_from = start_from + 0
 		self.emitter = MyEmitter()
 
 	def run(self):
-		#print(f"{self.name} api caller starting to run.")
 		returnjson = hevy_api.feed_workouts_paged(self.start_from)
-		#print(f"{self.name} api caller finishing up -> emit signal.")
 		self.emitter.done.emit(returnjson)
 
 class LikeEmitter(QObject):
