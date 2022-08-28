@@ -474,7 +474,7 @@ class Analysis(QWidget):
 					self.svgWidget.load(self.script_folder+"/icons/chart-line-solid.svg")
 			
 			elif self.graphList.currentItem().text() == "Cumulative Distance":
-				filename = "plot_cumulativedist_"+re.sub(r'\W+', '', selectedItemText)+'.svg'	
+				filename = "plot_cumulativedist_"+re.sub(r'\W+', '', selectedItemText)+'.svg'
 				if os.path.exists(self.user_folder+"/"+filename):	
 					self.svgWidget.load(self.user_folder+"/"+filename)
 				else:

@@ -11,6 +11,7 @@ import os
 import re
 import matplotlib.pyplot as plt
 import datetime as dt
+from dateutil.relativedelta import relativedelta
 
 from pathlib import Path
 # INIT
@@ -45,6 +46,8 @@ def generate_options_cumulative_distance():
 			workout_id=match_user_file.group(2)
 			#print("Found workout file for:",workout_date,workout_id,", in file",userfile)
 			user_files.append(userfile)
+			
+			
 	print(len(user_files),"user data files to process")
 	
 	exercises_available = {}
@@ -61,6 +64,13 @@ def generate_options_cumulative_distance():
 				filename = user_folder+'/plot_cumulativedist_'+re.sub(r'\W+', '', set_group["title"])+'.svg'
 				exists = os.path.exists(filename)
 				exercises_available[set_group["title"]] = exists
+				
+				#
+				# add another version for just the last 12 months
+				#
+				filename12 = user_folder+'/plot_cumulativedist_'+re.sub(r'\W+', '', set_group["title"])+'12months.svg'
+				exists12 = os.path.exists(filename12)
+				exercises_available[set_group["title"]+" (12 months)"] = exists12
 				
 				#print(set_group["title"],exists,filename)
 
@@ -89,6 +99,16 @@ def generate_plot_cumulative_distance(the_exercise, width, height):
 
 	their_user_id = session_data["user-id"]
 
+	#
+	# This bit is for limiting to the last 12 months
+	#
+	timelimit = False
+	cal_start_date = None
+	if the_exercise.endswith(" (12 months)"):
+		timelimit = True
+		cal_start_date = (dt.datetime.now().astimezone()-relativedelta(years=1)).strftime("%Y-%m-%d")
+		the_exercise = the_exercise[:-12]
+	
 
 	# Find each workout json file	
 	user_files = []	
@@ -99,6 +119,10 @@ def generate_plot_cumulative_distance(the_exercise, width, height):
 			workout_id=match_user_file.group(2)
 			#print("Found workout file for:",workout_date,workout_id,", in file",userfile)
 			user_files.append(userfile)
+			
+			# Break if we're limiting to the last 12 months
+			if timelimit and workout_date < cal_start_date:
+				break
 	print(len(user_files),"user data files to process")
 
 
@@ -193,6 +217,10 @@ def generate_plot_cumulative_distance(the_exercise, width, height):
 
 	# Write to a folder change png to svg if want that
 	export_folder = user_folder
-	fig1.savefig(export_folder+'/plot_cumulativedist_'+re.sub(r'\W+', '', the_exercise)+'.svg', dpi=100)
+	if timelimit:
+		fig1.savefig(export_folder+'/plot_cumulativedist_'+re.sub(r'\W+', '', the_exercise)+'12months.svg', dpi=100)
+	else:
+		fig1.savefig(export_folder+'/plot_cumulativedist_'+re.sub(r'\W+', '', the_exercise)+'.svg', dpi=100)
 
-
+	# was a warning about having lots of plots open, does this remove?
+	plt.close()
