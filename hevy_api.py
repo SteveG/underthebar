@@ -421,10 +421,55 @@ def like_workout(workout_id, like_it):
 	return r.status_code
 	
 	
+#
+# List of friends, cli only atm
+#	
+def friends():
+	# Make sure user is logged in, have their folder, and auth-token
+	user_data = is_logged_in()
+	if user_data[0] == False:
+		return 403
+	user_folder = user_data[1]
+	auth_token = user_data[2]
+	
+	# Make the headers
+	headers = BASIC_HEADERS.copy()
+	headers["auth-token"] = auth_token
 	
 	
+	url = "https://api.hevyapp.com/following/lazy_steve"	
+	s = requests.Session()	
+	r = s.get(url, headers=headers)	
+	following_data = r.json()
+	following = []
+	for datum in following_data:
+		following.append(datum['username'])
 	
+	url = "https://api.hevyapp.com/followers/lazy_steve"	
+	r = s.get(url, headers=headers)	
+	followers_data = r.json()
+	follower = []
+	for datum in followers_data:
+		follower.append(datum['username'])
 	
+	mutual_friend = []
+	follow_only = []
+	not_follow = []
+	for follow in following:
+		if follow in follower:
+			mutual_friend.append(follow)
+		else:
+			follow_only.append(follow)
+	for follow in follower:
+		if follow not in following:
+			not_follow.append(follow)
+			
+	print("Mutual Friends:")
+	print(mutual_friend)
+	print("You Folllow:")
+	print(follow_only)
+	print("Following You:")
+	print(not_follow)
 
 if __name__ == "__main__":
 	#login_cli()
@@ -433,5 +478,6 @@ if __name__ == "__main__":
 	#print("updating workout_count",update_generic("workout_count"))
 	#print("updating set_personal_records",update_generic("set_personal_records"))
 	#print("updating user_subscription",update_generic("user_subscription"))
-	print(is_logged_in())
+	#print(is_logged_in())
+	friends()
 
