@@ -208,9 +208,9 @@ def generate_plot_workouts(the_exercise, width, height):
 	fig, ax1 = plt.subplots()
 
 	if weekly:
-		ax1.bar(monthchart_dates,monthchart_data,alpha=0.5,width=6,align='edge', label='Primary')
+		ax1.bar(monthchart_dates,monthchart_data,alpha=0.5,width=6,align='edge', label='Workouts')
 	else:
-		ax1.bar(monthchart_dates,monthchart_data,alpha=0.5,width=20,align='edge', label='Primary')
+		ax1.bar(monthchart_dates,monthchart_data,alpha=0.5,width=20,align='edge', label='Workouts')
 	
 
 	#Plot formatting
