@@ -46,6 +46,7 @@ import utb_plot_volume_month
 import utb_plot_volume_week
 import utb_plot_body_measures
 import utb_plot_bodypart_reps
+import utb_plot_workouts
 		
 class Analysis(QWidget):
 
@@ -101,6 +102,7 @@ class Analysis(QWidget):
 		self.graphList.addItem("Volume (per Week) Year")
 		self.graphList.addItem("Volume (per Workout)")
 		self.graphList.addItem("Volume (per Workout) Year")
+		self.graphList.addItem("Workouts")
 		self.graphList.setFixedHeight(self.graphList.sizeHintForRow(0) * self.graphList.count() + 2 * self.graphList.frameWidth())
 		sidelayout.addWidget(self.graphList)
 		
@@ -280,6 +282,23 @@ class Analysis(QWidget):
 			else:
 				self.svgWidget.load(self.script_folder+"/icons/chart-line-solid.svg")
 		
+		elif graphSelected == "Workouts":
+			utb_plot_workouts.generate_plot_workouts(optionSelected, self.svgWidget.width(), self.svgWidget.height())
+			filename = "plot_plot_workouts_permonth"+'.svg'	
+			if optionSelected == "per Month":
+				filename = "plot_workouts_permonth.svg"	
+			elif optionSelected == "per Month (12 months)":
+				filename = "plot_workouts_permonth_12months.svg"
+			elif optionSelected == "per Week":
+				filename = "plot_workouts_perweek.svg"
+			elif optionSelected == "per Week (12 months)":
+				filename = "plot_workouts_perweek_12months.svg"
+			if os.path.exists(self.user_folder+"/"+filename):	
+				self.svgWidget.load(self.user_folder+"/"+filename)
+				self.optionList.currentItem().setCheckState(Qt.Checked)
+			else:
+				self.svgWidget.load(self.script_folder+"/icons/chart-line-solid.svg")
+		
 		#self.svgWidget.load(self.user_folder+"/plot_repmax_BenchPressDumbbell.svg")
 		
 	def graphListRowChanged(self,row):
@@ -423,6 +442,17 @@ class Analysis(QWidget):
 				
 		elif selected_text == "Body Measures":
 			self.options = utb_plot_body_measures.generate_options_body_measures()
+			for new_item in sorted(self.options.keys()):
+				newOpt = QListWidgetItem(str(new_item))
+				newOpt.setFlags(newOpt.flags() | Qt.ItemIsUserCheckable)
+				newOpt.setCheckState(Qt.Unchecked)
+				if self.options[new_item]:
+					newOpt.setCheckState(Qt.Checked)
+				self.optionList.addItem(newOpt)		
+		
+		
+		elif selected_text == "Workouts":
+			self.options = utb_plot_workouts.generate_options_workouts()
 			for new_item in sorted(self.options.keys()):
 				newOpt = QListWidgetItem(str(new_item))
 				newOpt.setFlags(newOpt.flags() | Qt.ItemIsUserCheckable)
@@ -582,6 +612,23 @@ class Analysis(QWidget):
 					self.svgWidget.load(self.user_folder+"/"+filename)
 				else:
 					self.svgWidget.load(self.script_folder+"/icons/chart-line-solid.svg")
+					
+					
+			elif self.graphList.currentItem().text() == "Workouts":
+				filename = "plot_plot_workouts_permonth"+'.svg'	
+				if selectedItemText == "per Month":
+					filename = "plot_workouts_permonth.svg"	
+				elif selectedItemText == "per Month (12 months)":
+					filename = "plot_workouts_permonth_12months.svg"
+				elif selectedItemText == "per Week":
+					filename = "plot_workouts_perweek.svg"
+				elif selectedItemText == "per Week (12 months)":
+					filename = "plot_workouts_perweek_12months.svg"
+				if os.path.exists(self.user_folder+"/"+filename):	
+					self.svgWidget.load(self.user_folder+"/"+filename)
+				else:
+					self.svgWidget.load(self.script_folder+"/icons/chart-line-solid.svg")		
+					
 					
 
 if __name__ == "__main__":
