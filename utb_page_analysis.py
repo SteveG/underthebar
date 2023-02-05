@@ -46,6 +46,7 @@ import utb_plot_volume_month
 import utb_plot_volume_week
 import utb_plot_body_measures
 import utb_plot_bodypart_reps
+import utb_plot_bodypart_sets
 import utb_plot_workouts
 		
 class Analysis(QWidget):
@@ -90,6 +91,7 @@ class Analysis(QWidget):
 		self.graphList.currentRowChanged.connect(self.graphListRowChanged)
 		self.graphList.addItem("Body Measures")
 		self.graphList.addItem("Body Part Reps")
+		self.graphList.addItem("Body Part Sets")
 		self.graphList.addItem("Chin-up / Pull-up Year")
 		self.graphList.addItem("Cumulative Distance")
 		self.graphList.addItem("Cumulative Reps")
@@ -194,7 +196,15 @@ class Analysis(QWidget):
 				self.optionList.currentItem().setCheckState(Qt.Checked)
 			else:
 				self.svgWidget.load(self.script_folder+"/icons/chart-line-solid.svg")
-				
+		
+		elif graphSelected == "Body Part Sets":
+			utb_plot_bodypart_sets.generate_plot_bodypart_sets(optionSelected, self.svgWidget.width(), self.svgWidget.height())
+			filename = "plot_bodypartsets_"+re.sub(r'\W+', '', optionSelected)+'.svg'	
+			if os.path.exists(self.user_folder+"/"+filename):	
+				self.svgWidget.load(self.user_folder+"/"+filename)
+				self.optionList.currentItem().setCheckState(Qt.Checked)
+			else:
+				self.svgWidget.load(self.script_folder+"/icons/chart-line-solid.svg")		
 		
 		elif graphSelected == "Cumulative Reps":
 			utb_plot_cumulative_reps.generate_plot_cumulative_reps(optionSelected, self.svgWidget.width(), self.svgWidget.height())
@@ -369,6 +379,15 @@ class Analysis(QWidget):
 					newOpt.setCheckState(Qt.Checked)
 				self.optionList.addItem(newOpt)
 		
+		elif selected_text == "Body Part Sets":
+			self.options = utb_plot_bodypart_sets.generate_options_bodypart_sets()
+			for new_item in sorted(self.options.keys()):
+				newOpt = QListWidgetItem(str(new_item))
+				newOpt.setFlags(newOpt.flags() | Qt.ItemIsUserCheckable)
+				newOpt.setCheckState(Qt.Unchecked)
+				if self.options[new_item]:
+					newOpt.setCheckState(Qt.Checked)
+				self.optionList.addItem(newOpt)
 						
 		elif selected_text == "Cumulative Reps":
 			self.options = utb_plot_cumulative_reps.generate_options_cumulative_reps()
@@ -536,6 +555,14 @@ class Analysis(QWidget):
 			
 			elif self.graphList.currentItem().text() == "Body Part Reps":
 				filename = "plot_bodypartreps_"+re.sub(r'\W+', '', selectedItemText)+'.svg'
+				print("looking for",filename)	
+				if os.path.exists(self.user_folder+"/"+filename):	
+					self.svgWidget.load(self.user_folder+"/"+filename)
+				else:
+					self.svgWidget.load(self.script_folder+"/icons/chart-line-solid.svg")
+					
+			elif self.graphList.currentItem().text() == "Body Part Sets":
+				filename = "plot_bodypartsets_"+re.sub(r'\W+', '', selectedItemText)+'.svg'
 				print("looking for",filename)	
 				if os.path.exists(self.user_folder+"/"+filename):	
 					self.svgWidget.load(self.user_folder+"/"+filename)

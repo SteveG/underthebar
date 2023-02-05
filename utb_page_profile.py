@@ -529,13 +529,15 @@ class Profile(QWidget):
 					for measure_set in measure_data:
 						measure_string += "\n"
 						the_keys = list(measure_set.keys())
-						for measurekey in the_keys[2:]:
+						for measurekey in the_keys[1:]:
 							if measure_set[measurekey] != None:
 								if measurekey == "weight_kg" and self.weight_unit=="lbs":
 									lb = round(measure_set[measurekey]*2.20462262,2)
 									if lb.is_integer():
 										lb = int(lb)
 									measure_string += "    " + "Weight Lb" +": "+ str(lb) + "\n        "
+								elif measurekey =="user_id":
+									None
 								else:
 									measure_string += "    " + measurekey.replace("_"," ").title() +": "+ str(measure_set[measurekey]) + "\n        "
 					self.measureList.addItem(measure_string)

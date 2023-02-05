@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Under the Bar - Body Part Cumulative Reps
+"""Under the Bar - Body Part Cumulative SETS
 
-This file provides a plot of cumulative repetitions for each relevant lift.
+This file provides a plot of cumulative repetitions for each relevant lift. Based on Body part reps.
 """
 
 import json
@@ -25,7 +25,7 @@ from pathlib import Path
 
 
 
-def generate_options_bodypart_reps():
+def generate_options_bodypart_sets():
 	# return every weight_reps type exercise ever completed by user
 	home_folder = str(Path.home())
 	utb_folder = home_folder + "/.underthebar"
@@ -51,16 +51,16 @@ def generate_options_bodypart_reps():
 	
 	exercises_available = {}
 	# add the all body parts option
-	filename = user_folder+'/plot_bodypartreps_All.svg'
+	filename = user_folder+'/plot_bodypartsets_All.svg'
 	exists = os.path.exists(filename)
 	exercises_available["--All--"] = exists
-	filename12 = user_folder+'/plot_bodypartreps_All12months.svg'
+	filename12 = user_folder+'/plot_bodypartsets_All12months.svg'
 	exists12 = os.path.exists(filename12)
 	exercises_available["--All-- (12 months)"] = exists12
-	filenameweek = user_folder+'/plot_bodypartreps_Allweekly.svg'
+	filenameweek = user_folder+'/plot_bodypartsets_Allweekly.svg'
 	existsweek = os.path.exists(filenameweek)
 	exercises_available["--All-- (weekly)"] = existsweek
-	filenameweekprop = user_folder+'/plot_bodypartreps_Allweeklyprop.svg'
+	filenameweekprop = user_folder+'/plot_bodypartsets_Allweeklyprop.svg'
 	existsweekprop = os.path.exists(filenameweekprop)
 	exercises_available["--All-- (weekly prop)"] = existsweekprop
 	
@@ -69,40 +69,42 @@ def generate_options_bodypart_reps():
 		workout_data = json.load(f)
 		
 		for set_group in workout_data['exercises']:
-			if set_group["exercise_type"] == "weight_reps" or set_group["exercise_type"] == "reps_only" or set_group["exercise_type"] == "bodyweight_reps":
+			if 1: #set_group["exercise_type"] == "weight_reps" or set_group["exercise_type"] == "reps_only" or set_group["exercise_type"] == "bodyweight_reps" or set_group["exercise_type"] == "distance_duration" or set_group["exercise_type"] == "duration":
 				#exercises_available[set_group["title"]] = set_group["exercise_template_id"]
 				
 				primary_bodypart = set_group["muscle_group"]
-				filename = user_folder+'/plot_bodypartreps_'+re.sub(r'\W+', '', primary_bodypart)+'.svg'
+				filename = user_folder+'/plot_bodypartsets_'+re.sub(r'\W+', '', primary_bodypart)+'.svg'
 				exists = os.path.exists(filename)
 				exercises_available[primary_bodypart] = exists
 				
 				# add another version for just the last 12 months
-				filename12 = user_folder+'/plot_bodypartreps_'+re.sub(r'\W+', '', primary_bodypart)+'12months.svg'
+				filename12 = user_folder+'/plot_bodypartsets_'+re.sub(r'\W+', '', primary_bodypart)+'12months.svg'
 				exists12 = os.path.exists(filename12)
 				exercises_available[primary_bodypart+" (12 months)"] = exists12
 				
 				# add another version for weekly values
-				filenameweek = user_folder+'/plot_bodypartreps_'+re.sub(r'\W+', '', primary_bodypart)+'weekly.svg'
+				filenameweek = user_folder+'/plot_bodypartsets_'+re.sub(r'\W+', '', primary_bodypart)+'weekly.svg'
 				existsweek = os.path.exists(filenameweek)
 				exercises_available[primary_bodypart+" (weekly)"] = existsweek
 				
 				for bp in set_group["other_muscles"]:
-					filename = user_folder+'/plot_bodypartreps_'+re.sub(r'\W+', '', bp)+'.svg'
+					filename = user_folder+'/plot_bodypartsets_'+re.sub(r'\W+', '', bp)+'.svg'
 					exists = os.path.exists(filename)
 					exercises_available[bp] = exists
 					
 					# add another version for just the last 12 months
-					filename12 = user_folder+'/plot_bodypartreps_'+re.sub(r'\W+', '', bp)+'12months.svg'
+					filename12 = user_folder+'/plot_bodypartsets_'+re.sub(r'\W+', '', bp)+'12months.svg'
 					exists12 = os.path.exists(filename12)
 					exercises_available[bp+" (12 months)"] = exists12
 					
 					# add another version for weekly values
-					filenameweek = user_folder+'/plot_bodypartreps_'+re.sub(r'\W+', '', bp)+'weekly.svg'
+					filenameweek = user_folder+'/plot_bodypartsets_'+re.sub(r'\W+', '', bp)+'weekly.svg'
 					existsweek = os.path.exists(filenameweek)
 					exercises_available[bp+" (weekly)"] = existsweek
 				
 				#print(set_group["title"],exists,filename)
+			else:
+				print(set_group["exercise_type"])
 
 	
 	return exercises_available
@@ -115,7 +117,7 @@ def generate_options_bodypart_reps():
 
 
 
-def generate_plot_bodypart_reps(the_exercise, width, height):
+def generate_plot_bodypart_sets(the_exercise, width, height):
 	home_folder = str(Path.home())
 	utb_folder = home_folder + "/.underthebar"
 	session_data = {}
@@ -211,11 +213,11 @@ def generate_plot_bodypart_reps(the_exercise, width, height):
 					reps = 1
 				
 				if set_group["muscle_group"] == the_exercise:
-					repcount += reps
+					repcount += 1
 				elif the_exercise in set_group["other_muscles"] or the_exercise[0:7]=="--All--":
-					repcount_secondary += reps
-					bodypart_counter.update({set_group["muscle_group"]:reps})
-					workout_bodypart_counter.update({set_group["muscle_group"]:reps})
+					repcount_secondary += 1
+					bodypart_counter.update({set_group["muscle_group"]:1})
+					workout_bodypart_counter.update({set_group["muscle_group"]:1})
 		#print("workout:",workout_date,repmax1,repmax3,repmax5,repmax10)
 		exercise_to_track_data[workout_date]=repcount
 		exercise_to_track_data_secondary[workout_date]=repcount_secondary
@@ -331,13 +333,13 @@ def generate_plot_bodypart_reps(the_exercise, width, height):
 
 	#Plot formatting
 	
-	plt.title(the_exercise.capitalize()+' Workout Reps')
+	plt.title(the_exercise.capitalize()+' Workout Sets')
 	if timelimit and not weekly:
-		plt.title(the_exercise.capitalize()+' Workout Reps (12 months)')
+		plt.title(the_exercise.capitalize()+' Workout Sets (12 months)')
 	elif the_exercise == "--All-- (weekly prop)":
-		plt.title(the_exercise.capitalize())
+		plt.title("All Workout Sets (weekly proportional)")
 	elif weekly:
-		plt.title(the_exercise.capitalize()+' Weekly Reps (12 months)')
+		plt.title(the_exercise.capitalize()+' Weekly Sets (12 months)')
 	ax1.set_xlabel("Generated "+str(dt.datetime.now())[:16], fontsize=8)
 	ax1.yaxis.tick_right()
 	ax1.yaxis.set_ticks_position('both')
@@ -352,13 +354,13 @@ def generate_plot_bodypart_reps(the_exercise, width, height):
 	# Write to a folder change png to svg if want that
 	export_folder = user_folder
 	if timelimit and not weekly:
-		fig1.savefig(export_folder+'/plot_bodypartreps_'+re.sub(r'\W+', '', the_exercise)+'12months.svg', dpi=100)
+		fig1.savefig(export_folder+'/plot_bodypartsets_'+re.sub(r'\W+', '', the_exercise)+'12months.svg', dpi=100)
 	elif the_exercise == "--All-- (weekly prop)":
-		fig1.savefig(export_folder+'/plot_bodypartreps_'+re.sub(r'\W+', '', the_exercise)+'.svg', dpi=100)
+		fig1.savefig(export_folder+'/plot_bodypartsets_'+re.sub(r'\W+', '', the_exercise)+'.svg', dpi=100)
 	elif weekly:
-		fig1.savefig(export_folder+'/plot_bodypartreps_'+re.sub(r'\W+', '', the_exercise)+'weekly.svg', dpi=100)
+		fig1.savefig(export_folder+'/plot_bodypartsets_'+re.sub(r'\W+', '', the_exercise)+'weekly.svg', dpi=100)
 	else:
-		fig1.savefig(export_folder+'/plot_bodypartreps_'+re.sub(r'\W+', '', the_exercise)+'.svg', dpi=100)
+		fig1.savefig(export_folder+'/plot_bodypartsets_'+re.sub(r'\W+', '', the_exercise)+'.svg', dpi=100)
 	
 	plt.close()
 
