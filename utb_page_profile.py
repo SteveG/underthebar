@@ -526,17 +526,20 @@ class Profile(QWidget):
 					measure_data = json.load(file)["data"]
 					measure_data.reverse()
 					measure_string = "\nBody Measurements\n"
+					
 					for measure_set in measure_data:
 						measure_string += "\n"
+						measure_string += "    " + str("Date").replace("_"," ").title() +": "+ str(measure_set["date"]) + "\n        "
 						the_keys = list(measure_set.keys())
-						for measurekey in the_keys[1:]:
+						
+						for measurekey in the_keys:
 							if measure_set[measurekey] != None:
 								if measurekey == "weight_kg" and self.weight_unit=="lbs":
 									lb = round(measure_set[measurekey]*2.20462262,2)
 									if lb.is_integer():
 										lb = int(lb)
 									measure_string += "    " + "Weight Lb" +": "+ str(lb) + "\n        "
-								elif measurekey =="user_id":
+								elif measurekey in ("user_id","id","date"):
 									None
 								else:
 									measure_string += "    " + measurekey.replace("_"," ").title() +": "+ str(measure_set[measurekey]) + "\n        "
