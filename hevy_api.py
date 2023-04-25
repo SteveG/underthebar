@@ -340,6 +340,8 @@ def routines_sync_batch():
 	# Workouts subfolder	
 	workouts_folder = user_folder + "/workouts"
 	routines_folder = user_folder + "/routines"
+	if not os.path.exists(routines_folder):
+		os.makedirs(routines_folder)
 	
 	# Create required headers
 	headers = BASIC_HEADERS.copy()

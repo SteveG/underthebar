@@ -50,6 +50,8 @@ class Routines(QWidget):
 			return 403
 		user_folder = utb_folder + "/user_" + session_data["user-id"]	
 		self.routines_folder = user_folder + "/routines"
+		if not os.path.exists(self.routines_folder):
+			os.makedirs(self.routines_folder)
 		
 		
 		#
