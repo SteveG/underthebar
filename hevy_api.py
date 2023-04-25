@@ -324,6 +324,124 @@ def workouts_sync_batch():
 	
 	return (200,update)
 
+
+#
+# Similar to workouts sync batch but for saved routines
+#
+def routines_sync_batch():
+	# Make sure user is logged in, have their folder, and auth-token
+	user_data = is_logged_in()
+	if user_data[0] == False:
+		return 403
+	user_folder = user_data[1]
+	auth_token = user_data[2]
+	
+	
+	# Workouts subfolder	
+	workouts_folder = user_folder + "/workouts"
+	routines_folder = user_folder + "/routines"
+	
+	# Create required headers
+	headers = BASIC_HEADERS.copy()
+	headers["auth-token"] = auth_token
+	
+	# Go through all workouts and compile the workout ID and when it was updated
+	existing_data = {}
+	existing_id_file = {}
+	for file in os.listdir(routines_folder):
+		match_workout = re.search('^routine_([A-Za-z0-9_-]+).json\Z',file)
+		if match_workout:
+			
+			f = open(routines_folder+'/'+file)
+			workout_data = json.load(f)
+			existing_data[workout_data['id']] = workout_data['updated_at']
+			existing_id_file[workout_data['id']] = file
+	
+	# Post our existing data that we have compiled, and see what gets returned
+	s = requests.Session()
+	r = s.post('https://api.hevyapp.com/routines_sync_batch', data=json.dumps(existing_data), headers=headers)
+	json_content = r.json()	
+		
+	# HEVY RETURNS A SET OF WORKOUTS THAT HAVE BEEN UPDATED or DELETED
+	for updated_workout in json_content['updated']:
+		routine_id = updated_workout['id']
+		workoutfilename=routines_folder+"/"+"routine_"+routine_id+".json"
+		with open(workoutfilename, 'w') as f:
+			json.dump(updated_workout, f, indent=4)
+		
+		print("updated",workoutfilename)
+		
+	# Any workouts deleted we'll move our copy of the workout to a deleted folder	
+	for deleted_workout in json_content['deleted']:
+		deletedir = routines_folder+"/deleted"
+		if not os.path.exists(deletedir):
+			os.makedirs(deletedir)
+		print("delete", deleted_workout, existing_id_file[deleted_workout])
+		shutil.move(routines_folder+"/"+existing_id_file[deleted_workout],deletedir+"/"+existing_id_file[deleted_workout])
+		
+		# Does a local copy exist as well?
+		if os.path.exists(routines_folder+"/modified/"+existing_id_file[deleted_workout]):
+			deletedir = routines_folder+"/modified/deleted"
+			if not os.path.exists(deletedir):
+				os.makedirs(deletedir)
+			print("delete", deleted_workout, existing_id_file[deleted_workout])
+			shutil.move(routines_folder+"/modified/"+existing_id_file[deleted_workout],deletedir+"/"+existing_id_file[deleted_workout])
+		
+	# Do we need to make this API call again because there is more data available???
+	update = False
+	if json_content['isMore'] == True:
+		update=True	
+	
+	return (200,update)
+
+#
+# Upload an updated workout
+#
+def put_routine(the_json, routine_id=None):
+	# Make sure user is logged in, have their folder, and auth-token
+	user_data = is_logged_in()
+	if user_data[0] == False:
+		return 403
+	user_folder = user_data[1]
+	auth_token = user_data[2]
+	
+	
+#	# Workouts subfolder	
+#	workouts_folder = user_folder + "/workouts"
+#	routines_folder = user_folder + "/routines"
+	
+	# Create required headers
+	headers = BASIC_HEADERS.copy()
+	headers["auth-token"] = auth_token
+
+	#return 200
+	s = requests.Session()
+	#print('https://api.hevyapp.com/routine/'+routine_id)
+	#print(the_json)
+	
+	r = None
+	if routine_id == None:
+		r = s.post('https://api.hevyapp.com/routine/', data=json.dumps(the_json), headers=headers)
+	else:
+		r = s.put('https://api.hevyapp.com/routine/'+routine_id, data=json.dumps(the_json), headers=headers)
+	return r.status_code
+	#return 400
+
+def delete_routine(routine_id):
+	# Make sure user is logged in, have their folder, and auth-token
+	user_data = is_logged_in()
+	if user_data[0] == False:
+		return 403
+	user_folder = user_data[1]
+	auth_token = user_data[2]
+	
+	# Create required headers
+	headers = BASIC_HEADERS.copy()
+	headers["auth-token"] = auth_token
+	s = requests.Session()	
+	r = s.delete('https://api.hevyapp.com/routine/'+routine_id, headers=headers)
+	return r.status_code, False
+
 #	
 # Get the Hevy workout feed starting from workout with given index, returns json data
 #

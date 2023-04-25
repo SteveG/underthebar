@@ -26,6 +26,7 @@ from utb_page_profile import Profile
 #from utb_page_workout import Workout # This is a work in progress
 from utb_page_analysis import Analysis
 from utb_page_setting import Setting
+from utb_page_routines import Routines
 import hevy_api
 
 
@@ -81,16 +82,16 @@ class UnderTheBar(QMainWindow):
 		button_layout.addWidget(btn)
 		self.stacklayout.addWidget(Profile("red"))
 
-#		btn = QPushButton()#("🏋️+")
-#		#btn.setStyleSheet("font-size: 40px;");
-#		btn.setIcon(self.loadIcon(script_folder+"/icons/dumbbell-solid.svg"))
-#		btn.setIconSize(QSize(48,48))
-#		btn.setCheckable(True)
-#		btn.setFlat(True)
-#		btn.setAutoExclusive(True);
-#		btn.pressed.connect(self.activate_workout)
-#		button_layout.addWidget(btn)
-#		self.stacklayout.addWidget(Workout("green"))
+		btn = QPushButton()#("🏋️+")
+		#btn.setStyleSheet("font-size: 40px;");
+		btn.setIcon(self.loadIcon(script_folder+"/icons/dumbbell-solid.svg"))
+		btn.setIconSize(QSize(48,48))
+		btn.setCheckable(True)
+		btn.setFlat(True)
+		btn.setAutoExclusive(True);
+		btn.pressed.connect(self.activate_workout)
+		button_layout.addWidget(btn)
+		self.stacklayout.addWidget(Routines("green"))
 
 		btn = QPushButton()#("📈")
 		#btn.setStyleSheet("font-size: 40px;");
@@ -144,12 +145,12 @@ class UnderTheBar(QMainWindow):
 		self.stacklayout.setCurrentIndex(1)
 
 	def activate_analysis(self):
-		self.stacklayout.widget(1).do_update()
-		self.stacklayout.setCurrentIndex(1)
+		self.stacklayout.widget(2).do_update()
+		self.stacklayout.setCurrentIndex(2)
 
 
 	def activate_settings(self):
-		self.stacklayout.setCurrentIndex(2)
+		self.stacklayout.setCurrentIndex(3)
 		
 		
 
