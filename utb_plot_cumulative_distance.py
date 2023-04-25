@@ -202,6 +202,9 @@ def generate_plot_cumulative_distance(the_exercise, width, height):
 
 	ax2.bar(x_barchart,barchart_data,alpha=0.5,width=2, label='Km')
 	ax2.plot(x_barchart,pace_data,alpha=0.8, label='Min/Km')
+	# custom minor tick
+	#ax2.set_yticks([1.1, 2, 2.5], ["fish","fish","fish"], minor=True)
+	#ax2.tick_params(which='minor', length=5, width=2, direction='in')
 
 	#Plot formatting
 	ax2.legend(loc='lower right')

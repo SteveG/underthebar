@@ -69,7 +69,7 @@ def generate_options_bodypart_reps():
 		workout_data = json.load(f)
 		
 		for set_group in workout_data['exercises']:
-			if set_group["exercise_type"] == "weight_reps" or set_group["exercise_type"] == "reps_only" or set_group["exercise_type"] == "bodyweight_reps":
+			if 1:#set_group["exercise_type"] == "weight_reps" or set_group["exercise_type"] == "reps_only" or set_group["exercise_type"] == "bodyweight_reps":
 				#exercises_available[set_group["title"]] = set_group["exercise_template_id"]
 				
 				primary_bodypart = set_group["muscle_group"]
