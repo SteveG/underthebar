@@ -303,6 +303,8 @@ class Routines(QWidget):
   
   If you want easy, use the app or the website! Don't edit what you don't understand!
   
+  Copy / paste from a spreadsheet program is something I have in mind with this. 
+  
   Tip: Needs to be valid JSON. Make sure you have a comma between exercises.        
   
 """)

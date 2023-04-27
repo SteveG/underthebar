@@ -21,6 +21,8 @@ Stuff I'm using to make this work for me:
 - requests
 - Font Awesome icons
 
+A username and password is required. If you don't log in to Hevy like this I've been told it can be generated with a password reset.
+
 ## To run it
 Execute the python file "underthebar.py" (Windows users can download latest pre-built [release](https://github.com/SteveG/underthebar/releases) and run that)
 - It should prompt you to log in to Hevy
@@ -50,6 +52,9 @@ Next is the calendar heat map which shows which days you've done a workout.
 Lastly is just some stats:
 - A tracking list of your body measurements
 - A list of personal records for exercises that have been completed recently
+
+## Routine Editor page
+Newest addition and not for the faint of heart. Here you can create/modify your Hevy routines in raw text mode. More detailed instructions for this are included on the page. Best used in conjuction with the existing Hevy routine editors. Provides a potential avenue to copy your routines from a spreadsheet program for those who manage detailed programming.
 
 ## Analysis page
 To get graphs go to the analysis page (the second, graph-looking button on the left)
