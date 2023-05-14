@@ -44,6 +44,10 @@ class Setting(QWidget):
 		else:
 			return 403
 		user_folder = utb_folder + "/user_" + session_data["user-id"]	
+		if not os.path.exists(user_folder):
+			os.makedirs(user_folder)
+			os.makedirs(user_folder+"/workouts")
+			os.makedirs(user_folder+"/routines")
 		
 		self.user_folder = utb_folder + "/user_" + session_data["user-id"]	
 		
@@ -55,6 +59,8 @@ class Setting(QWidget):
 		if os.path.exists(user_folder+"/workout_count.json"):	
 			with open(user_folder+"/workout_count.json", 'r') as file:
 				workoutcount_data = json.load(file)
+		else:
+			workoutcount_data = {"data": {"workout_count": 0}}
 		
 		pagelayout = QVBoxLayout()
 		toplayout = QHBoxLayout()

@@ -71,6 +71,7 @@ def login(user, password):
 			if not os.path.exists(user_folder):
 				os.makedirs(user_folder)
 				os.makedirs(user_folder+"/workouts")
+				os.makedirs(user_folder+"/routines")
 			
 			with open(utb_folder+"/session.json", 'w') as f:
 				json.dump({"auth-token":auth_token,"user-id":user_id},f)
@@ -192,6 +193,20 @@ def update_generic(to_update):
 		new_data = {"data":data, "Etag":r.headers['Etag']}
 		with open(user_folder+"/"+filename, 'w') as f:
 			json.dump(new_data, f)
+			
+			
+		# IF ACCOUNT UPDATED WE ALSO WILL RE-FETCH PROFILE IMAGE
+		if to_update == "account":
+			try:
+				imageurl = data["profile_pic"]
+				response = requests.get(imageurl, stream=True)
+				if response.status_code == 200:
+					with open(user_folder+"/profileimage", 'wb') as out_file:
+						shutil.copyfileobj(response.raw, out_file)
+				print("updated profile pic")
+			except:	
+				pass
+			
 		return 200
 	elif r.status_code == 304:
 		return 304
@@ -586,9 +601,9 @@ def friends():
 			
 	print("Mutual Friends:")
 	print(mutual_friend)
-	print("You Folllow:")
+	print("\nYou Folllow:")
 	print(follow_only)
-	print("Following You:")
+	print("\nFollowing You:")
 	print(not_follow)
 
 if __name__ == "__main__":

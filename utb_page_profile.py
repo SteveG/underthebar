@@ -84,10 +84,18 @@ class Profile(QWidget):
 		if os.path.exists(user_folder+"/account.json"):	
 			with open(user_folder+"/account.json", 'r') as file:
 				account_data = json.load(file)
+		else:
+			account_data = {"data":{"username":"Please download data.",
+				"full_name":"Please download data.",
+				"description":"Bottom left to download.\n\nThe gear icon.",
+				"follower_count": 0,
+				"following_count":0}}
 		workoutcount_data = None
 		if os.path.exists(user_folder+"/workout_count.json"):	
 			with open(user_folder+"/workout_count.json", 'r') as file:
 				workoutcount_data = json.load(file)
+		else:
+			workoutcount_data = {"data": {"workout_count": 0}}
 		# here we are going to get the preferred units of the user
 		if os.path.exists(user_folder+"/user_preferences.json"):
 			with open(user_folder+"/user_preferences.json", 'r') as file:	
@@ -105,13 +113,17 @@ class Profile(QWidget):
 		#self.layout().addStretch()
 
 		toplayout.addStretch()
-		piclabel = QLabel("image")
-		pixmap = QPixmap(user_folder+"/profileimage")#.scaled(250,250)
-		pixmap = self.makeProfileImage(pixmap)
-		
-		piclabel.setPixmap(pixmap)
-		piclabel.setFixedSize(250,250)
-		toplayout.addWidget(piclabel)
+		self.piclabel = QLabel("image")
+		if os.path.exists(user_folder+"/profileimage"):
+			pixmap = QPixmap(user_folder+"/profileimage")#.scaled(250,250)
+			pixmap = self.makeProfileImage(pixmap)
+			self.piclabel.setPixmap(pixmap)
+		else:
+			script_folder = os.path.split(os.path.abspath(__file__))[0]
+			pixmap = QPixmap(script_folder+"/icons/user-solid.svg").scaled(250,250)
+			self.piclabel.setPixmap(pixmap)
+		self.piclabel.setFixedSize(250,250)
+		toplayout.addWidget(self.piclabel)
 	
 		detailslayout = QVBoxLayout()
 		#detailslayout.addWidget(QLabel("Details"))
@@ -383,12 +395,16 @@ class Profile(QWidget):
 				self.detailLabel.setText(account_data["data"]["description"])
 				self.followersLabel.setText(str(account_data["data"]["follower_count"]))
 				self.followingLabel.setText(str(account_data["data"]["following_count"]))
+			else:
+				self.usernameLabel.setText("Download account data")
 			workoutcount_data = None
 			if os.path.exists(user_folder+"/workout_count.json"):	
 				with open(user_folder+"/workout_count.json", 'r') as file:
 					workoutcount_data = json.load(file)
 				localWorkoutCount = len(os.listdir(self.workouts_folder))
 				self.workoutcountLabel.setText("Remote:"+str(workoutcount_data["data"]["workout_count"])+"\tLocal:"+str(localWorkoutCount))
+			else:
+				self.workoutcountLabel.setText("Download workout count")
 			# here we are going to get the preferred units of the user
 			if os.path.exists(user_folder+"/user_preferences.json"):
 				with open(user_folder+"/user_preferences.json", 'r') as file:	
@@ -545,6 +561,8 @@ class Profile(QWidget):
 									measure_string += "    " + measurekey.replace("_"," ").title() +": "+ str(measure_set[measurekey]) + "\n        "
 					self.measureList.addItem(measure_string)
 						#id_records[record["exercise_template_id"]] = [record["type"],record["record"]]
+			else:
+				self.measureList.addItem("\nDownload body measurements. \nBottom left gear icon.")
 			
 			# populate PR list
 			self.recordList.clear()
@@ -617,6 +635,18 @@ class Profile(QWidget):
 					#fancy_string += "\n    Record type: "+ record_type
 					#fancy_string += "\n    Record value: "+ str(record_value)
 					self.recordList.addItem(fancy_string)
+			else:
+				self.recordList.addItem("\nDownload personal records, \nBottom left gear icon.")
+		
+			#update user profile image		
+			if os.path.exists(user_folder+"/profileimage"):
+				pixmap = QPixmap(user_folder+"/profileimage")#.scaled(250,250)
+				pixmap = self.makeProfileImage(pixmap)
+				self.piclabel.setPixmap(pixmap)
+			else:
+				script_folder = os.path.split(os.path.abspath(__file__))[0]
+				pixmap = QPixmap(script_folder+"/icons/user-solid.svg").scaled(250,250)
+				self.piclabel.setPixmap(pixmap)
 			
 	
 	def deleteItemsOfLayout(self, layout):
