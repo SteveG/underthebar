@@ -27,6 +27,13 @@ def generate_options_pullupchinupyear():
 	user_folder = utb_folder + "/user_" + session_data["user-id"]	
 	workouts_folder = user_folder + "/workouts"
 	
+	exercises_to_plot = ["Chin Up",
+		"Chin Up (Weighted)",
+		"Chin Up (Assisted)",
+		"Pull Up (Weighted)",
+		"Pull Up",
+		"Pull Up (Assisted)"]
+	
 	# Find each workout json file, group them by year	
 	user_files = []	
 	user_files_byyear = {}
@@ -52,11 +59,9 @@ def generate_options_pullupchinupyear():
 			
 			haveyear = False
 			for set_group in workout_data['exercises']:
-				if set_group["title"] in ["Chin Up (Weighted)", "Pull Up (Weighted)"]:
+				if set_group["title"] in exercises_to_plot: #["Chin Up (Weighted)", "Pull Up (Weighted)"]:
 					#exercises_available[set_group["title"]] = set_group["exercise_template_id"]
 					
-					#fig1.savefig(export_folder+'/plot_cumulativereps_'+re.sub(r'\W+', '', exercises_to_plot[exercise_to_plot])+'.png', dpi=100)
-					#fig1.savefig(export_folder+'/plot_repmax_'+re.sub(r'\W+', '', exercises_to_plot[exercise_to_plot])+'.svg', dpi=100)
 					filename = user_folder+'/plot_pullupchinupyear_'+year+'.svg'
 					exists = os.path.exists(filename)
 					years_available[year] = exists
@@ -84,10 +89,16 @@ def generate_plot_pullupchinupyear(year, width, height):
 
 	their_user_id = session_data["user-id"]
 
-	exercises_to_plot = {
-		"023943F1":"Chin Up (Weighted)",
-		"729237D1":"Pull Up (Weighted)"
-	}
+#	exercises_to_plot = {
+#		"023943F1":"Chin Up (Weighted)",
+#		"729237D1":"Pull Up (Weighted)"
+#	}
+	exercises_to_plot = ["Chin Up",
+		"Chin Up (Weighted)",
+		"Chin Up (Assisted)",
+		"Pull Up (Weighted)",
+		"Pull Up",
+		"Pull Up (Assisted)"]
 
 	plot_year = dt.datetime.now().year # override this to specify a year
 	plot_year = int(year)
@@ -102,44 +113,6 @@ def generate_plot_pullupchinupyear(year, width, height):
 	plot_prev_year_start_timestamp = plot_prev_year_start.replace(tzinfo=dt.timezone.utc).timestamp()
 	plot_prev_year_end = dt.datetime(plot_prev_year,12,31,23,59,59)
 	plot_prev_year_end_timestamp = plot_prev_year_end.replace(tzinfo=dt.timezone.utc).timestamp()
-
-		
-	# Find user directory
-	#for file in os.listdir('./fito_data'):
-	#	
-	#	#print('checking',file)
-	#	match_user = re.search('^user([0-9]+)\Z',file)
-	#	if match_user:
-	#		found_user_id=None
-	#		found_user_id=match_user.group(1)
-	#		
-	#		# found a user directory, check for username
-	#		if os.path.exists("./fito_data/user"+found_user_id+"/username"):
-	#			with open("./fito_data/user"+found_user_id+"/username", 'r') as file:
-	#				username = file.read().rstrip()
-	#				if username == user_to_find:
-	#					their_user_id = found_user_id
-
-	#if not their_user_id:
-	#	print("Didn't find user data, have you already used adduser.py and fitoworkouts.py???")
-	#	sys.exit()
-
-	## load up the exercises
-	#if not os.path.exists("fito_data/exercises.json"):
-	#	print("No exercises.json file found")
-	#	print("Run fitoworkouts.py to fetch")
-	#	sys.exit()
-	#f = open("./fito_data/exercises.json")
-	#exercisesjson = json.load(f)
-	#exercises_data = {}
-	#exercise_to_track_id = None
-	#for exercise in exercisesjson['data']:
-	#	if exercise['name'] == exercise_to_track:
-	#		exercise_to_track_id = exercise['id']
-	#	#exercises_data[exercise['name']] = exercise[exercise['id']]
-	#if not exercise_to_track_id:
-	#	print("Didn't find requested exercise in db! Maybe check spelling")
-	#	sys.exit()
 
 
 	# Find each workout json file	
@@ -171,7 +144,8 @@ def generate_plot_pullupchinupyear(year, width, height):
 		
 		relevant_set_groups = []
 		for set_group in workout_data['exercises']:
-			if set_group["exercise_template_id"] in exercises_to_plot.keys():
+			#if set_group["exercise_template_id"] in exercises_to_plot.keys():
+			if set_group["title"] in exercises_to_plot:
 				relevant_set_groups.append(set_group)
 			
 		if len(relevant_set_groups)>0:
@@ -244,8 +218,9 @@ def generate_plot_pullupchinupyear(year, width, height):
 	ax1.text(x_repcount[-1], repcount_data[-1], repcount_data[-1],fontsize=7,alpha=0.8)
 
 	ax1.plot(x_prev_repcount, repcount_prev_data, label=str(plot_prev_year)+' Reps', alpha=0.8)
-	ax1.text(x_prev_repcount[-1], repcount_prev_data[-1], repcount_prev_data[-1],fontsize=7,alpha=0.8)
-
+	if len(repcount_prev_data)>0:
+		ax1.text(x_prev_repcount[-1], repcount_prev_data[-1], repcount_prev_data[-1],fontsize=7,alpha=0.8)
+	
 	ax2.bar(x_barchart,barchart_data,alpha=0.4,width=2)
 	ax2.bar(x_prev_barchart,barchart_prev_data,alpha=0.2,width=2)
 
