@@ -10,7 +10,7 @@ import re
 import matplotlib.pyplot as plt
 import datetime as dt
 from dateutil.relativedelta import relativedelta
-
+import numpy as np
 from pathlib import Path
 # INIT
 
@@ -34,6 +34,22 @@ def generate_options_volume_week(timelimit=False):
 		return 403
 	user_folder = utb_folder + "/user_" + session_data["user-id"]	
 	workouts_folder = user_folder + "/workouts"
+	
+	# to include based on body weight where available. Add the specific exercises to this list
+	special_bodyweight = ["Chin Up (Weighted)",
+		"Chin Up",
+		"Chin Up (Assisted)",
+		"Pull Up (Weighted)",
+		"Pull Up",
+		"Pull Up (Assisted)",
+		"Ring Dips",
+		"Triceps Dip",
+		"Triceps Dip (Weighted)",
+		"Triceps Dip (Assisted)",
+		"Chest Dip",
+		"Chest Dip (Weighted)",
+		"Chest Dip (Assisted)",
+		]
 	
 	cal_start_date = None
 	if timelimit == True:
@@ -68,11 +84,8 @@ def generate_options_volume_week(timelimit=False):
 		workout_data = json.load(f)
 		
 		for set_group in workout_data['exercises']:
-			if set_group["exercise_type"] == "weight_reps":# or set_group["exercise_type"] == "reps_only" or set_group["exercise_type"] == "bodyweight_reps":
-				#exercises_available[set_group["title"]] = set_group["exercise_template_id"]
-				
-				#fig1.savefig(export_folder+'/plot_cumulativereps_'+re.sub(r'\W+', '', exercises_to_plot[exercise_to_plot])+'.png', dpi=100)
-				#fig1.savefig(export_folder+'/plot_repmax_'+re.sub(r'\W+', '', exercises_to_plot[exercise_to_plot])+'.svg', dpi=100)
+			if set_group["exercise_type"] == "weight_reps" or set_group["title"] in special_bodyweight:
+			
 				filename = user_folder+'/plot_volumeweek_'+re.sub(r'\W+', '', set_group["title"])+'.svg'
 				if timelimit:
 					filename = user_folder+'/plot_volumeweekyear_'+re.sub(r'\W+', '', set_group["title"])+'.svg'
@@ -105,6 +118,34 @@ def generate_plot_volume_week(the_exercise, width, height, timelimit=False):
 	workouts_folder = user_folder + "/workouts"
 
 	their_user_id = session_data["user-id"]
+	
+	
+	# Load bodyweight data if it is available 
+	special_bodyweight = ["Chin Up (Weighted)",
+		"Chin Up",
+		"Chin Up (Assisted)",
+		"Pull Up (Weighted)",
+		"Pull Up",
+		"Pull Up (Assisted)",
+		"Ring Dips",
+		"Triceps Dip",
+		"Triceps Dip (Weighted)",
+		"Triceps Dip (Assisted)",
+		"Chest Dip",
+		"Chest Dip (Weighted)",
+		"Chest Dip (Assisted)",
+		]
+	bodyweight_data = {}
+	bodyweight_dates = np.array([])
+	if os.path.exists(user_folder+"/body_measurements.json"):
+		with open(user_folder+"/body_measurements.json", 'r') as file:
+			raw_data = json.load(file)
+			for element in raw_data["data"]:
+				if "weight_kg" in element.keys():
+					bodyweight_data[int(element["date"].replace("-",""))] = element["weight_kg"]
+					bodyweight_dates = np.append(bodyweight_dates, int(element["date"].replace("-","")))
+	
+	
 	
 	cal_start_date = None
 	if timelimit == True:
@@ -141,7 +182,7 @@ def generate_plot_volume_week(the_exercise, width, height, timelimit=False):
 		
 		relevant_set_groups = []
 		for set_group in workout_data['exercises']:
-			if set_group["title"] == the_exercise or (the_exercise=="--All--" and set_group["exercise_type"] == "weight_reps"):
+			if set_group["title"] == the_exercise or (the_exercise=="--All--" and (set_group["exercise_type"] == "weight_reps" or set_group["title"] in special_bodyweight)):
 				relevant_set_groups.append(set_group)
 			
 		if len(relevant_set_groups)>0:
@@ -157,8 +198,19 @@ def generate_plot_volume_week(the_exercise, width, height, timelimit=False):
 		repcount = 0
 		
 		for set_group in exercise_to_track_workouts[workout_date]:
+		
+			add_bodyweight = 0
+			if set_group["title"] in special_bodyweight:
+				use_date = int(dt.datetime.fromtimestamp(workout_date, dt.timezone.utc).strftime("%Y%m%d"))
+				prev_dates = bodyweight_dates[bodyweight_dates < use_date]
+				if len(prev_dates)>0:
+					add_bodyweight = bodyweight_data[int(prev_dates.max())]
+			
+			
 			for workout_set in set_group['sets']:
-				reps = workout_set["reps"] * workout_set["weight_kg"]
+				if workout_set["weight_kg"] == None:
+					workout_set["weight_kg"] = 0
+				reps = workout_set["reps"] * (workout_set["weight_kg"]+add_bodyweight)
 				if set_group["equipment_category"] == "dumbbell":
 					reps = reps * 2
 				
