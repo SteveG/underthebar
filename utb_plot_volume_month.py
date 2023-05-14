@@ -168,7 +168,7 @@ def generate_plot_volume_month(the_exercise, width, height):
 		
 		relevant_set_groups = []
 		for set_group in workout_data['exercises']:
-			if set_group["title"] == the_exercise or (the_exercise=="--All--" and (set_group["exercise_type"] == "weight_reps" or set_group["title"] in special_bodyweight)):
+			if set_group["title"] == the_exercise or (the_exercise.startswith("--All--") and (set_group["exercise_type"] == "weight_reps" or set_group["title"] in special_bodyweight)):
 				relevant_set_groups.append(set_group)
 			
 		if len(relevant_set_groups)>0:
