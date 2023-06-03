@@ -543,6 +543,7 @@ class Profile(QWidget):
 		
 				bodypicitem = QListWidgetItem()
 				bodypic = QtSvg.QSvgWidget(user_folder+"/plot_bodyweight_small.svg")
+				bodypic.setToolTip("Body weight\n20 most recent")
 				#bodypic.load(svgbecomes)
 				bodypic.setFixedWidth(300)
 				bodypic.setFixedHeight(200)
@@ -745,6 +746,7 @@ class Profile(QWidget):
 			
 			bodypicitem = QListWidgetItem()
 			bodypic = QtSvg.QSvgWidget()
+			bodypic.setToolTip("Light - Targeted Muscle\nDark - Secondary Muscle\nBlack - No Activity")
 			bodypic.load(svgbecomes)
 			bodypic.setFixedWidth(300)
 			bodypic.setFixedHeight(200)
@@ -790,6 +792,7 @@ class Profile(QWidget):
 			
 			bodypicitem = QListWidgetItem()
 			bodypic = QtSvg.QSvgWidget()
+			bodypic.setToolTip("Light - Targeted Muscle\nDark - Secondary Muscle\nBlack - No Activity")
 			bodypic.load(svgbecomes)
 			bodypic.setFixedWidth(300)
 			bodypic.setFixedHeight(200)
