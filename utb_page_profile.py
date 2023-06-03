@@ -12,8 +12,9 @@ import datetime
 import time
 import calendar
 import re
+import xml.etree.ElementTree as ET
 
-from PySide2.QtCore import Qt, QRect, QItemSelectionModel
+from PySide2.QtCore import Qt, QSize, QRect, QItemSelectionModel
 from PySide2 import QtSvg
 from PySide2.QtWidgets import (
     QApplication,
@@ -222,7 +223,7 @@ class Profile(QWidget):
 		self.ownList.setFixedWidth(300)
 		self.ownList.setSelectionMode(QAbstractItemView.NoSelection)
 		self.ownList.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
-		self.ownList.setAlternatingRowColors(True)
+		self.ownList.setAlternatingRowColors(False)
 		self.ownList.setFocusPolicy(Qt.NoFocus);
 		self.ownList.verticalScrollBar().setSingleStep(15)
 		bottomcornerlayout.addWidget(self.ownList)
@@ -675,6 +676,9 @@ class Profile(QWidget):
 			
 			workout_count = 0
 			exercises = {}
+			bodypart_list = []
+			other_bodypart_list = []
+			
 			for key in self.relevant_workout_files.keys():
 				if key.startswith(the_date):
 					
@@ -684,6 +688,11 @@ class Profile(QWidget):
 						workout_count +=1
 						with open(self.workouts_folder+"/"+file, 'r') as loadfile:
 							temp_data = json.load(loadfile)
+							# body picture
+							body_things = self.get_bodyparts(temp_data)
+							bodypart_list = bodypart_list + body_things[0]
+							other_bodypart_list = other_bodypart_list + body_things[1]
+					        # basic data
 							basics = self.get_basic_workout_stats(temp_data)
 							for exercise in basics.keys():
 								if exercise not in exercises.keys():
@@ -703,18 +712,77 @@ class Profile(QWidget):
 				fancystring += "\n        "+s_ex+": "+str(sorted_exercises[s_ex]) + " sets"
 			fancystring += "\n\n    Social: " + str(like_count) + " prop(s), " + str(comment_count) + " comment(s)"
 			self.ownList.clear()
+			
+			#body picture stuff
+			tree = ET.parse(self.script_folder+"/icons/fullbody.svg")
+			root = tree.getroot()
+			
+			for child in root:
+				if child.attrib["id"] in other_bodypart_list:#["chest"]:
+					for sub_child in child:
+						sub_child.attrib["fill"] = "midnightblue"
+				if child.attrib["id"] in bodypart_list:#["chest"]:
+					for sub_child in child:
+						sub_child.attrib["fill"] = "#2A82DA"
+			svgbecomes = ET.tostring(root)
+			
+			bodypicitem = QListWidgetItem()
+			bodypic = QtSvg.QSvgWidget()
+			bodypic.load(svgbecomes)
+			bodypic.setFixedWidth(300)
+			bodypic.setFixedHeight(200)
+			bodypicitem.setSizeHint(QSize(200,200))
+			self.ownList.addItem(bodypicitem)
+			self.ownList.setItemWidget(bodypicitem,bodypic)
+			
 			self.ownList.addItem(fancystring)
 			
 		else: # single day selected
 		
 			fancystring = ""
+			bodypart_list = []
+			other_bodypart_list = []
+			
 			for file in self.relevant_workout_files[the_date]:
 				with open(self.workouts_folder+"/"+file, 'r') as loadfile:
 					temp_data = json.load(loadfile)
 					fancystring += self.get_fancy_text(temp_data)
+					# body picture
+					body_things = self.get_bodyparts(temp_data)
+					bodypart_list = bodypart_list + body_things[0]
+					other_bodypart_list = other_bodypart_list + body_things[1]
 					#print("\n\n"+fancystring)
-					self.ownList.clear()
-					self.ownList.addItem(fancystring)
+			self.ownList.clear()
+			#self.ownList.addItem("body here")
+			
+			
+			#print(bodypart_list,other_bodypart_list)
+			
+			
+			tree = ET.parse(self.script_folder+"/icons/fullbody.svg")
+			root = tree.getroot()
+			
+			for child in root:
+				if child.attrib["id"] in other_bodypart_list:#["chest"]:
+					for sub_child in child:
+						sub_child.attrib["fill"] = "midnightblue"
+				if child.attrib["id"] in bodypart_list:#["chest"]:
+					for sub_child in child:
+						sub_child.attrib["fill"] = "#2A82DA"
+			svgbecomes = ET.tostring(root)
+			
+			bodypicitem = QListWidgetItem()
+			bodypic = QtSvg.QSvgWidget()
+			bodypic.load(svgbecomes)
+			bodypic.setFixedWidth(300)
+			bodypic.setFixedHeight(200)
+			bodypicitem.setSizeHint(QSize(200,200))
+			self.ownList.addItem(bodypicitem)
+			self.ownList.setItemWidget(bodypicitem,bodypic)
+			
+			
+			self.ownList.addItem(fancystring)
+					
 	
 	def get_basic_workout_stats(self, workoutjson):
 		workout = workoutjson
@@ -732,7 +800,7 @@ class Profile(QWidget):
 	def get_fancy_text(self, workoutjson):
 		workout = workoutjson
 		#fancystring = "\n"+workout["username"] + " - " + workout["name"]
-		fancystring = "\n"+workout["name"]
+		fancystring = workout["name"]
 		workout_date = datetime.datetime.utcfromtimestamp(workout["start_time"])
 		workout_date = workout_date.replace(tzinfo=datetime.timezone.utc).astimezone(tz=None)
 		
@@ -824,7 +892,21 @@ class Profile(QWidget):
 		
 		fancystring += "\n"	
 		return fancystring
-						
+	
+	# this is used when clicking on the calendar widget, returns the primary, secondary bodyparts in a workout
+	def get_bodyparts(self, workoutjson):
+	    bodyparts = []
+	    other_bodyparts = []
+	    for exercise in workoutjson["exercises"]:
+	        bp = exercise["muscle_group"]
+	        if bp not in bodyparts:
+	            bodyparts.append(bp)
+	        for other_bp in exercise["other_muscles"]:
+	            if other_bp not in other_bodyparts:
+	                other_bodyparts.append(other_bp)
+	    #print(bodyparts)  
+	    return bodyparts, other_bodyparts
+	
 	def feedScrollChanged(self, value): #https://doc.qt.io/qt-5/qabstractslider.html#valueChanged
 		if value >= self.feedList.verticalScrollBar().maximum()-1000 and self.feedloadbutton.isEnabled(): #if we're at the end
 			self.feed_load_button()
