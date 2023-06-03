@@ -40,6 +40,7 @@ from PySide2.QtCore import Slot, Signal, QObject, QThreadPool, QRunnable
 
 import hevy_api	
 import textwrap
+import utb_plot_body_measures
 	
 		
 class Profile(QWidget):
@@ -535,14 +536,30 @@ class Profile(QWidget):
 			
 			
 			# Body measurements
-			# Body measurements
 			self.measureList.clear()
+			
+			try:
+				utb_plot_body_measures.generate_bodyweight_small()
+		
+				bodypicitem = QListWidgetItem()
+				bodypic = QtSvg.QSvgWidget(user_folder+"/plot_bodyweight_small.svg")
+				#bodypic.load(svgbecomes)
+				bodypic.setFixedWidth(300)
+				bodypic.setFixedHeight(200)
+				bodypicitem.setSizeHint(QSize(200,200))
+				self.measureList.addItem(bodypicitem)
+				self.measureList.setItemWidget(bodypicitem,bodypic)
+			except:
+			    print("error loading bodyweight graph")
+			
+			# Body measurements
+			
 			if os.path.exists(user_folder+"/body_measurements.json"):	
 				with open(user_folder+"/body_measurements.json", 'r') as file:
 					
 					measure_data = json.load(file)["data"]
 					measure_data.reverse()
-					measure_string = "\nBody Measurements\n"
+					measure_string = "Body Measurements\n"
 					
 					for measure_set in measure_data:
 						measure_string += "\n"
@@ -705,7 +722,7 @@ class Profile(QWidget):
 			del exercises["comment_count"]
 			sorted_exercises = dict(sorted(exercises.items(), key=lambda item: item[1], reverse=True))
 			
-			fancystring = "\nMonth Summary: "+ the_date
+			fancystring = "Month Summary: "+ the_date
 			fancystring += "\n\n    Workouts completed: " + str(workout_count)
 			fancystring += "\n\n    Exercises: \n"
 			for s_ex in sorted_exercises.keys():

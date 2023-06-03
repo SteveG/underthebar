@@ -11,6 +11,7 @@ import os
 import datetime as dt
 from pathlib import Path
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 # this import is to make pyinstaller import matplotlib properly...
 import matplotlib
 matplotlib.use("svg")
@@ -94,6 +95,7 @@ def generate_plot_body_measures(the_measure, width, height):
 	plt.rc('ytick', labelsize=8)
 	plt.rc('legend', fontsize=8) 
 	fig, ax1 = plt.subplots()
+	ax1.xaxis.set_major_formatter(mdates.ConciseDateFormatter(ax1.xaxis.get_major_locator()))
 
 	ax1.plot(x_dates, measure_track_data, label=the_measure, alpha=0.8)  #where='post', 
 	#ax1.text(x_repmax1[-1], repmax1_data[-1], repmax1_data[-1],fontsize=8,alpha=0.5)
@@ -126,4 +128,77 @@ def generate_plot_body_measures(the_measure, width, height):
 	export_folder = user_folder
 	fig1.savefig(export_folder+'/plot_bodymeasures_'+the_measure+'.svg', dpi=100)
 
+def generate_bodyweight_small():
+	the_measure = "weight_kg"
 
+	home_folder = str(Path.home())
+	utb_folder = home_folder + "/.underthebar"
+	session_data = {}
+	if os.path.exists(utb_folder+"/session.json"):	
+		with open(utb_folder+"/session.json", 'r') as file:
+			session_data = json.load(file)
+	else:
+		return 403
+	user_folder = utb_folder + "/user_" + session_data["user-id"]	
+	
+	measures_file = user_folder + "/body_measurements.json"
+	exists = os.path.exists(measures_file)
+	if not exists:
+		return 404
+	
+	f = open(measures_file)
+	measures_data = json.load(f)
+	measure_track_data = []
+	measure_track_dates = []
+	
+	counter = 0
+	# just graph the last 20 points
+	for measure_group in reversed(measures_data["data"]):
+		counter +=1
+		if counter> 20:
+			break
+		the_data = measure_group[the_measure]
+		the_date = measure_group["date"]
+		
+		if the_data != None:
+			measure_track_data.append(the_data)
+			measure_track_dates.append(the_date)
+		
+
+
+
+
+
+
+	#Create dates for each series x axis
+	x_dates = [dt.datetime.strptime(d,"%Y-%m-%d").date() for d in measure_track_dates]
+
+
+	#Create plot
+	plt.style.use('dark_background') # Can just comment out this line if don't want dark style.
+	plt.rc('xtick', labelsize=6)
+	plt.rc('ytick', labelsize=6)
+	#plt.rc('legend', fontsize=8) 
+	
+	fig, ax1 = plt.subplots()
+	# see this for date formatting https://matplotlib.org/stable/gallery/text_labels_and_annotations/date.html
+	#ax1.xaxis.set_major_locator(plt.MaxNLocator(3))
+	#ax1.xaxis.set_major_locator(mdates.MonthLocator(bymonth=(1,7)))
+	ax1.xaxis.set_major_formatter(mdates.ConciseDateFormatter(ax1.xaxis.get_major_locator()))
+
+	fig.patch.set_facecolor('black')
+	fig.patch.set_alpha(0.0)
+	ax1.set_facecolor("black")
+	ax1.plot(x_dates, measure_track_data, label=the_measure, alpha=1,color="#2A82DA")  #where='post', 
+
+	#Plot formatting
+	#ax1.legend(loc='lower right')
+	#plt.title(the_measure+' History')
+	#ax1.set_xlabel("Generated "+str(dt.datetime.now())[:16], fontsize=8)
+	fig1 = plt.gcf()
+	fig.set_size_inches(300/fig1.dpi,200/fig.dpi)
+	plt.tight_layout(pad=1)
+
+	# Write to a folder change png to svg if want that
+	export_folder = user_folder
+	fig1.savefig(export_folder+'/plot_bodyweight_small.svg', dpi=100, facecolor=fig.get_facecolor())#transparent=False)
