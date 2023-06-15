@@ -71,4 +71,4 @@ pyinstaller
 - Had to add this to one plot file to get matplotlib to work correctly, error about including svg engine.
     - import matplotlib
     - matplotlib.use("svg")
-- pyinstaller --onefile --windowed --icons=icons\dumbbell-solid.ico --add-data="icons;icons" underthebar.py
+- pyinstaller --onefile --windowed --icon=icons\dumbbell-solid.ico --add-data="icons;icons" underthebar.py
