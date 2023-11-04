@@ -1,6 +1,8 @@
 # Under the Bar
 All I want to do is drink beer and train like an animal!
 
+![Screenshot](https://i.imgur.com/vcZQKni.png)
+
 ## About
 "Under the Bar" is a third-party client application for the Hevy workout tracking website and mobile applications.
 
