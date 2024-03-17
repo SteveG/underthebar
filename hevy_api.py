@@ -78,25 +78,27 @@ def login(user, password):
 			
 			with open(user_folder+"/account.json", 'w') as f:
 				json.dump(account_data, f)
-				
-			imageurl = data["profile_pic"]
-			response = requests.get(imageurl, stream=True)
-			if response.status_code == 200:
-				with open(user_folder+"/profileimage", 'wb') as out_file:
-					shutil.copyfileobj(response.raw, out_file)
-    				
-				r = s.get("https://api.hevyapp.com/workout_count", headers=headers)
-				if r.status_code == 200:
-					data = r.json()
-					
-					workout_count = {"data":data, "Etag":r.headers['Etag']}
-					#print(json.dumps(r.json(), indent=4, sort_keys=True))
-					
-					with open(user_folder+"/workout_count.json", 'w') as f:
-						json.dump(workout_count, f)
+			
+			if "profile_pic" in data:
+				imageurl = data["profile_pic"]
+				response = requests.get(imageurl, stream=True)
+				if response.status_code == 200:
+					with open(user_folder+"/profileimage", 'wb') as out_file:
+						shutil.copyfileobj(response.raw, out_file)
 						
-					return 200
-				return r.status_code
+					r = s.get("https://api.hevyapp.com/workout_count", headers=headers)
+					if r.status_code == 200:
+						data = r.json()
+						
+						workout_count = {"data":data, "Etag":r.headers['Etag']}
+						#print(json.dumps(r.json(), indent=4, sort_keys=True))
+						
+						with open(user_folder+"/workout_count.json", 'w') as f:
+							json.dump(workout_count, f)
+							
+						return 200
+					return r.status_code
+			return 200
 		else:
 			return r.status_code
 	else:
@@ -198,12 +200,13 @@ def update_generic(to_update):
 		# IF ACCOUNT UPDATED WE ALSO WILL RE-FETCH PROFILE IMAGE
 		if to_update == "account":
 			try:
-				imageurl = data["profile_pic"]
-				response = requests.get(imageurl, stream=True)
-				if response.status_code == 200:
-					with open(user_folder+"/profileimage", 'wb') as out_file:
-						shutil.copyfileobj(response.raw, out_file)
-				print("updated profile pic")
+				if "profile_pic" in data:
+					imageurl = data["profile_pic"]
+					response = requests.get(imageurl, stream=True)
+					if response.status_code == 200:
+						with open(user_folder+"/profileimage", 'wb') as out_file:
+							shutil.copyfileobj(response.raw, out_file)
+					print("updated profile pic")
 			except:	
 				pass
 			

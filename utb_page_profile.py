@@ -86,6 +86,10 @@ class Profile(QWidget):
 		if os.path.exists(user_folder+"/account.json"):	
 			with open(user_folder+"/account.json", 'r') as file:
 				account_data = json.load(file)
+				if "full_name" not in account_data["data"]:
+					account_data["data"]["full_name"] = ""
+				if "description" not in account_data["data"]:
+					account_data["data"]["description"] = ""
 		else:
 			account_data = {"data":{"username":"Please download data.",
 				"full_name":"Please download data.",
@@ -392,6 +396,10 @@ class Profile(QWidget):
 			if os.path.exists(user_folder+"/account.json"):	
 				with open(user_folder+"/account.json", 'r') as file:
 					account_data = json.load(file)
+					if "full_name" not in account_data["data"]:
+						account_data["data"]["full_name"] = ""
+					if "description" not in account_data["data"]:
+						account_data["data"]["description"] = ""
 				self.usernameLabel.setText(account_data["data"]["username"])
 				self.fullnameLabel.setText(account_data["data"]["full_name"])
 				self.detailLabel.setText(account_data["data"]["description"])
