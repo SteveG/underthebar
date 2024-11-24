@@ -25,7 +25,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             code_value = str(parse_qs(urlparse(self.path).query)["code"][0])
             self.send_response(200, "OK")
             self.end_headers()
-            self.wfile.write("It worked! Code returned, close the window.".encode("utf-8"))
+            self.wfile.write("It worked! Code returned, you can close the browser window.".encode("utf-8"))
 
             print("Writing strava code to file")
 
@@ -45,7 +45,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write("Failed. Didn't find code.".encode("utf-8"))
 
-
+	# note had to add this to allow server to work properly when run in window without console
+    def log_message(self, format, *args):
+        return
 
 
 
