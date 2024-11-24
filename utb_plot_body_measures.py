@@ -43,7 +43,7 @@ def generate_options_body_measures():
 		#print(measure_group["date"])
 		for measure_key in measure_group.keys():
 			#print(measure_key,measure_group[measure_key])
-			if (measure_key not in ["date","username","id"]) and measure_group[measure_key] != None:
+			if (measure_key not in ["date","username","id","created_at"]) and measure_group[measure_key] != None:
 				filename = user_folder+'/plot_bodymeasures_'+measure_key+'.svg'
 				exists = os.path.exists(filename)
 				measures_available[measure_key] = exists

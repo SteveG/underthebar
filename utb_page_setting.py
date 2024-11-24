@@ -24,6 +24,8 @@ from PySide2.QtGui import QIcon, QPixmap, QPainter
 from PySide2.QtCore import Slot, Signal, QObject, QThreadPool, QRunnable
 
 import hevy_api	
+import strava_api
+import utb_prs
 
 #
 # This view provides means to adjust settings and/or interact with the Hevy API
@@ -76,7 +78,7 @@ class Setting(QWidget):
 		
 		
 		
-		self.apiCallable = ["account","body_measurements","set_personal_records","user_preferences","user_subscription","workout_count",]
+		self.apiCallable = ["account","body_measurements","user_preferences","user_subscription","workout_count",] #"set_personal_records",
 		self.apiCallable_dict = {}
 		self.apiCallable_button = []
 		self.apiCallable_stateLabel = []
@@ -140,7 +142,19 @@ class Setting(QWidget):
 		self.workoutsyncbatchstateLabel.setFixedWidth(200)
 		workoutsyncgrid.addWidget(self.workoutsyncbatchstateLabel,2,2)
 		
-		
+		#Strava import
+		strava_import_label = QLabel("strava import")
+		strava_import_label.setFixedWidth(200)
+		workoutsyncgrid.addWidget(strava_import_label, 3,0)
+		self.stravaimportbtn = QPushButton()
+		self.stravaimportbtn.setIcon(self.loadIcon(self.script_folder+"/icons/cloud-arrow-down-solid.svg"))
+		self.stravaimportbtn.setIconSize(QSize(24,24))
+		#self.stravaimportbtn.clicked.connect(self.batch_button_pushed)
+		self.stravaimportbtn.clicked.connect(lambda *args, x="strava_import_batch": self.batch_button_pushed(x))
+		workoutsyncgrid.addWidget(self.stravaimportbtn,3,1)
+		self.stravaimportstateLabel = QLabel("Import most recent run/walk")
+		self.stravaimportstateLabel.setFixedWidth(200)
+		workoutsyncgrid.addWidget(self.stravaimportstateLabel,3,2)
 		
 		
 		# Log out and quit button
@@ -193,6 +207,12 @@ class Setting(QWidget):
 			self.workoutsyncbatchbtn.setEnabled(False)
 			self.workoutsyncbtn.setEnabled(False)
 			self.workoutsyncbatchstateLabel.setText("updating...")
+		elif name == "strava_import_batch":
+			self.stravaimportbtn.setIcon(self.loadIcon(self.script_folder+"/icons/spinner-solid.svg"))
+			self.stravaimportbtn.setIconSize(QSize(24,24))
+			self.stravaimportbtn.setEnabled(False)
+			#self.workoutsyncbtn.setEnabled(False)
+			self.stravaimportstateLabel.setText("importing...")
 		#self.launch_threadpool()
 		worker = MyBatchWorker(name,0)
 		worker.emitter.done.connect(self.on_batch_worker_done)
@@ -237,17 +257,32 @@ class Setting(QWidget):
 				
 		else:
 			if worker == "workouts_batch":
+				self.workoutsyncstateLabel.setText("updating PRs")
+				utb_prs.do_the_thing()
 				self.workoutsyncbtn.setIcon(self.loadIcon(self.script_folder+"/icons/cloud-arrow-down-solid.svg"))
 				self.workoutsyncbtn.setIconSize(QSize(24,24))
 				self.workoutsyncbtn.setEnabled(True)
 				self.workoutsyncbatchbtn.setEnabled(True)
 				self.workoutsyncstateLabel.setText("updated")
 			elif worker == "workouts_sync_batch":
+				self.workoutsyncbatchstateLabel.setText("updating PRs")
+				utb_prs.do_the_thing()
 				self.workoutsyncbatchbtn.setIcon(self.loadIcon(self.script_folder+"/icons/cloud-arrow-down-solid.svg"))
 				self.workoutsyncbatchbtn.setIconSize(QSize(24,24))
 				self.workoutsyncbtn.setEnabled(True)
 				self.workoutsyncbatchbtn.setEnabled(True)
 				self.workoutsyncbatchstateLabel.setText("updated")
+			elif worker == "strava_import_batch":
+				self.stravaimportbtn.setIcon(self.loadIcon(self.script_folder+"/icons/cloud-arrow-down-solid.svg"))
+				self.stravaimportbtn.setIconSize(QSize(24,24))
+				#self.workoutsyncbtn.setEnabled(True)
+				self.stravaimportbtn.setEnabled(True)
+				if return_code ==200:
+					self.stravaimportstateLabel.setText("completed")
+				elif return_code == 404:
+					self.stravaimportstateLabel.setText("API details not found")
+				else:
+					self.stravaimportstateLabel.setText("failed for some reason")
 		
 
 		
@@ -301,7 +336,14 @@ class MyBatchWorker(QRunnable):
 					status = hevy_api.batch_download()
 				elif self.name == "workouts_sync_batch":
 					status = hevy_api.workouts_sync_batch()
+				elif self.name == "strava_import_batch":
+					#status = hevy_api.workouts_sync_batch()
+					print("starting the thing")
+					stravasuccess = strava_api.do_the_thing()
+					print("finished the thing")
+					status = (stravasuccess, False)
 			except:
+				print("exception")
 				self.emitter.done.emit(str(self.name),0,False)
 				break
 			self.emitter.done.emit(str(self.name),status[0],status[1])

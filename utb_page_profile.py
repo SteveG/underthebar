@@ -582,7 +582,7 @@ class Profile(QWidget):
 									if lb.is_integer():
 										lb = int(lb)
 									measure_string += "    " + "Weight Lb" +": "+ str(lb) + "\n        "
-								elif measurekey in ("user_id","id","date"):
+								elif measurekey in ("user_id","id","date","created_at"):
 									None
 								else:
 									measure_string += "    " + measurekey.replace("_"," ").title() +": "+ str(measure_set[measurekey]) + "\n        "
@@ -635,7 +635,10 @@ class Profile(QWidget):
 				with open(user_folder+"/set_personal_records.json", 'r') as file:
 					records_data = json.load(file)["data"]
 					for record in records_data:
-						id_records[record["exercise_template_id"]] = [record["type"],record["record"]]
+						#id_records[record["exercise_template_id"]] = [record["type"],record["record"]]
+						old_value = id_records.get(record["exercise_template_id"],[])
+						old_value.append([record["type"],record["record"]])
+						id_records[record["exercise_template_id"]] = old_value
 				
 				self.recordList.addItem("\nPersonal Records")						
 				for exercise_title in sorted(self.exercises.keys()):
@@ -647,16 +650,19 @@ class Profile(QWidget):
 						self.recordList.addItem(fancy_string)
 						continue
 					
-					record_type = id_records[hevy_id][0]
-					record_value = id_records[hevy_id][1]
-				
 					fancy_string = "\n    "+exercise_title
-					if record_type == "best_weight" and self.weight_unit == "lbs":
-						lb = round(record_value*2.20462262,2)
-						if lb.is_integer():
-							lb = int(lb)
-						fancy_string += "\n        " + "Best Weight"+": "+str(lb)
-					else:
+					for record_set in id_records[hevy_id]:
+						record_type = record_set[0]
+						record_value = record_set[1]
+					
+						
+						if "weight" in record_type and self.weight_unit == "lbs":
+							lb = round(record_value*2.20462262,2)
+							if lb.is_integer():
+								lb = int(lb)
+							record_value = lb
+							#fancy_string += "\n        " + "Best Weight"+": "+str(lb)
+						#else:
 						fancy_string += "\n        " + record_type.replace("_"," ").title()+": "+str(record_value)
 					#fancy_string += "\n    Last workout: "+ self.exercises[exercise_title]
 					#fancy_string += "\n    Record type: "+ record_type
