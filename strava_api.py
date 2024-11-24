@@ -236,7 +236,26 @@ def do_the_thing():
 			run_template["workout"]["exercises"][0]["sets"][0]["duration"] = int(activity.moving_time.total_seconds())
 			run_template["workout"]["exercises"][0]["sets"][0]["distance"] = int(activity.distance)
 			
-			run_template["workout"]["description"] = "Cicyling (Virtual)" + "\n\n"+run_template["workout"]["description"]
+			run_template["workout"]["description"] = "Cycling (Virtual)" + "\n\n"+run_template["workout"]["description"]
+			if activity.average_heartrate:
+				run_template["workout"]["exercises"][0]["notes"] = "Heartrate Avg: " + str(activity.average_heartrate) + "bpm, Max: " + str(activity.max_heartrate) + "bpm."
+			if activity.average_watts:
+				run_template["workout"]["exercises"][0]["notes"] += "\nPower Avg: " + str(activity.average_watts) + "W, Max: " + str(activity.max_watts) + "W."
+			
+			#print(run_template)
+			do_submit = True
+
+		elif activity.type == "Ride" or str(activity.type) == "root='Ride'":
+			run_template["workout"]["name"] = activity.name 
+			run_template["workout"]["exercises"][0]["title"] = "Cycling"
+			run_template["workout"]["exercises"][0]["id"] = "D8F7F851"
+
+			run_template["workout"]["startTime"] = int(activity.start_date.timestamp())
+			run_template["workout"]["endTime"] = int(activity.start_date.timestamp()+activity.moving_time.total_seconds())
+			run_template["workout"]["exercises"][0]["sets"][0]["duration"] = int(activity.moving_time.total_seconds())
+			run_template["workout"]["exercises"][0]["sets"][0]["distance"] = int(activity.distance)
+			
+			run_template["workout"]["description"] = "Cycling" + "\n\n"+run_template["workout"]["description"]
 			if activity.average_heartrate:
 				run_template["workout"]["exercises"][0]["notes"] = "Heartrate Avg: " + str(activity.average_heartrate) + "bpm, Max: " + str(activity.max_heartrate) + "bpm."
 			if activity.average_watts:
