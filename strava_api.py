@@ -59,7 +59,6 @@ def do_the_thing():
 	#
 	cl_id = None   # put you strava api client id here
 	cl_secret = None  # put your strava api client secret here
-	
 
 	
 	if cl_id == None or cl_secret == None:
@@ -202,12 +201,14 @@ def do_the_thing():
 	for activity in activities:
 		#print("{0.type} {0.moving_time} {0.distance} {0.start_date} {0.average_heartrate} {0.max_heartrate} {0.average_watts} {0.max_watts}".format(activity))
 		print(activity.type,activity.name, activity.start_date)
+
 		#print(str(activity.type) == "root='Run'")
 		#print(type(activity.type))
 		# Here handle the submittable activities, we only want to submit one of those
 		# For the activity we want we'll modify the hevy workout template
 		do_submit = False
 		if activity.type == "Run" or str(activity.type) == "root='Run'":
+			activity = client.get_activity(activity.id)
 			run_template["workout"]["name"] = activity.name
 			run_template["workout"]["exercises"][0]["title"] = "Running"
 			run_template["workout"]["exercises"][0]["id"] = "AC1BB830"
@@ -217,7 +218,9 @@ def do_the_thing():
 			run_template["workout"]["exercises"][0]["sets"][0]["duration"] = int(activity.moving_time.total_seconds())
 			run_template["workout"]["exercises"][0]["sets"][0]["distance"] = int(activity.distance)
 			
-			run_template["workout"]["description"] = "Running" + "\n\n"+run_template["workout"]["description"]
+			if activity.description:
+				run_template["workout"]["description"] = str(activity.description) + "\n\n"+run_template["workout"]["description"]			
+			
 			if activity.average_heartrate:
 				run_template["workout"]["exercises"][0]["notes"] = "Heartrate Avg: " + str(activity.average_heartrate) + "bpm, Max: " + str(activity.max_heartrate) + "bpm."
 
@@ -227,6 +230,7 @@ def do_the_thing():
 		# Note that this is a custom exercise that only exists for me in Hevy...
 		elif ((activity.type == "VirtualRide" or str(activity.type) == "root='VirtualRide'") and
 				session_data["user-id"] == "f21f5af1-a602-48f0-82fb-ed09bc984326"):
+			activity = client.get_activity(activity.id)
 			run_template["workout"]["name"] = activity.name #"Virtual Ride (import)"
 			run_template["workout"]["exercises"][0]["title"] = "Cycling (Virtual)"
 			run_template["workout"]["exercises"][0]["id"] = "89f3ed93-5418-4cc6-a114-0590f2977ae8"
@@ -236,7 +240,9 @@ def do_the_thing():
 			run_template["workout"]["exercises"][0]["sets"][0]["duration"] = int(activity.moving_time.total_seconds())
 			run_template["workout"]["exercises"][0]["sets"][0]["distance"] = int(activity.distance)
 			
-			run_template["workout"]["description"] = "Cycling (Virtual)" + "\n\n"+run_template["workout"]["description"]
+			if activity.description:
+				run_template["workout"]["description"] = str(activity.description) + "\n\n"+run_template["workout"]["description"]
+			
 			if activity.average_heartrate:
 				run_template["workout"]["exercises"][0]["notes"] = "Heartrate Avg: " + str(activity.average_heartrate) + "bpm, Max: " + str(activity.max_heartrate) + "bpm."
 			if activity.average_watts:
@@ -246,6 +252,7 @@ def do_the_thing():
 			do_submit = True
 
 		elif activity.type == "Ride" or str(activity.type) == "root='Ride'":
+			activity = client.get_activity(activity.id)
 			run_template["workout"]["name"] = activity.name 
 			run_template["workout"]["exercises"][0]["title"] = "Cycling"
 			run_template["workout"]["exercises"][0]["id"] = "D8F7F851"
@@ -255,7 +262,9 @@ def do_the_thing():
 			run_template["workout"]["exercises"][0]["sets"][0]["duration"] = int(activity.moving_time.total_seconds())
 			run_template["workout"]["exercises"][0]["sets"][0]["distance"] = int(activity.distance)
 			
-			run_template["workout"]["description"] = "Cycling" + "\n\n"+run_template["workout"]["description"]
+			if activity.description:
+				run_template["workout"]["description"] = str(activity.description) + "\n\n"+run_template["workout"]["description"]
+			
 			if activity.average_heartrate:
 				run_template["workout"]["exercises"][0]["notes"] = "Heartrate Avg: " + str(activity.average_heartrate) + "bpm, Max: " + str(activity.max_heartrate) + "bpm."
 			if activity.average_watts:
@@ -266,6 +275,7 @@ def do_the_thing():
 
 		# Standard walk exercise
 		elif activity.type == "Walk" or str(activity.type) == "root='Walk'":
+			activity = client.get_activity(activity.id)
 			run_template["workout"]["name"] = activity.name #"Walk (import)"
 			run_template["workout"]["exercises"][0]["title"] = "Walking"
 			run_template["workout"]["exercises"][0]["id"] = "33EDD7DB"
@@ -275,7 +285,9 @@ def do_the_thing():
 			run_template["workout"]["exercises"][0]["sets"][0]["duration"] = int(activity.moving_time.total_seconds())
 			run_template["workout"]["exercises"][0]["sets"][0]["distance"] = int(activity.distance)
 			
-			run_template["workout"]["description"] = "Walking" + "\n\n"+run_template["workout"]["description"]
+			if activity.description:
+				run_template["workout"]["description"] = str(activity.description) + "\n\n"+run_template["workout"]["description"]
+			
 			if activity.average_heartrate:
 				run_template["workout"]["exercises"][0]["notes"] = "Heartrate Avg: " + str(activity.average_heartrate) + "bpm, Max: " + str(activity.max_heartrate) + "bpm."
 			
