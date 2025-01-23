@@ -1,0 +1,14 @@
+{
+    "Band Pullaparts": {"exercise_name":32, "exercise_category":37, "wkt_step_name":"Banded Pull Apart"},
+	"Bench Press (Barbell)": {"exercise_name":1, "exercise_category":0, "wkt_step_name":"Barbell Bench Press"},
+	"Bench Press (Dumbbell)": {"exercise_name":6, "exercise_category":0, "wkt_step_name":"Dumbbell Bench Press"},
+	"Chin Up (Weighted)": {"exercise_name":41, "exercise_category":21, "wkt_step_name":"Weighted Chin-up"},
+	"Deadlift (Barbell)": {"exercise_name":0, "exercise_category":8, "wkt_step_name":"Barbell Deadlift"},
+	"EZ Bar Biceps Curl": {"exercise_name":38, "exercise_category":7, "wkt_step_name":"Standing EZ-Bar Biceps Curl"},
+	"Lateral Raise (Dumbbell)": {"exercise_name":34, "exercise_category":14, "wkt_step_name":"Dumbbell Lateral Riase"},
+	"Plank": {"exercise_name":43, "exercise_category":19, "wkt_step_name":"Plank"},
+	"Reverse Curl (Barbell)": {"exercise_name":29, "exercise_category":7, "wkt_step_name":"Reverse EZ-Bar Curl"},
+	"Ring Dips": {"exercise_name":17, "exercise_category":14, "wkt_step_name":"Ring Dip"},
+	"Squat (Barbell)": {"exercise_name":6, "exercise_category":28, "wkt_step_name":"Barbell Back Squat"},
+	"Upright Row (Dumbbell)": {"exercise_name":6, "exercise_category":26, "wkt_step_name":"Dumbbell Upright Row"}
+}

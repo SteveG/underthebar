@@ -21,12 +21,14 @@ from PySide2.QtWidgets import (
     QListWidget,
     QPlainTextEdit,
     QGroupBox,
-    QMessageBox
+    QMessageBox,
+	QFileDialog
 )
 from PySide2.QtGui import QPalette, QColor
 from PySide2.QtCore import Slot, Signal, QObject, QThreadPool, QRunnable
 
 import hevy_api	
+import garmin_translate
 		
 class Routines(QWidget):
 
@@ -76,15 +78,19 @@ class Routines(QWidget):
 		workoutslayout.addWidget(self.workoutList)
 		
 		#
-		# Reload button below workout list
+		# Reload button below workout list   AND GARMIN TRANSLATE
 		#
 		self.reloadButton = QPushButton("Reload from Hevy")
+		self.garminButton = QPushButton("Garmin")
+		self.garminButton.setVisible(False)
 		#self.reloadButton.clicked.connect(self.reloadButtonClicked)
 		self.reloadButton.clicked.connect(lambda *args, x="routines_sync_batch": self.batch_button_pushed(x))
+		self.garminButton.clicked.connect(self.garminButtonClicked)
 		self.statusText = QLabel()
 		sublayout = QHBoxLayout()
 		sublayout.addWidget(self.reloadButton)
 		sublayout.addWidget(self.statusText)
+		sublayout.addWidget(self.garminButton)
 		workoutslayout.addLayout(sublayout)
 		
 		#
@@ -262,6 +268,7 @@ class Routines(QWidget):
 			pass
 		
 		selected_row = self.workoutList.currentRow()
+		
 		if selected_row ==0:
 			self.routineEditor.setPlainText(\
 """
@@ -310,6 +317,7 @@ class Routines(QWidget):
 """)
 			self.routineEditor.setReadOnly(True)
 			self.editorButtons.setVisible(False)
+			self.garminButton.setVisible(False)
 		elif selected_row ==1:
 			
 			if os.path.exists(self.routines_folder+'/modified/newroutine.json'):
@@ -338,6 +346,7 @@ class Routines(QWidget):
 			self.routineEditor.setReadOnly(False)
 			self.routineEditor.textChanged.connect(self.routineTextChanged)
 			self.editorButtons.setVisible(True)
+			self.garminButton.setVisible(False)
 			
 		else:
 		
@@ -355,7 +364,10 @@ class Routines(QWidget):
 				self.routineEditor.textChanged.connect(self.routineTextChanged)
 				self.editorButtons.setVisible(False)
 		
+			## Show the garmin button
 			
+			if os.path.exists(self.routines_folder+'/garmin_translations.json'):
+				self.garminButton.setVisible(True)
 	#
 	# Handle editing of the routine text editor
 	#
@@ -477,6 +489,15 @@ class Routines(QWidget):
 		
 	def reloadButtonClicked(self):
 		print("pull updates from server")
+	
+	
+	def garminButtonClicked(self):
+		print("garmin button was pressed")
+		filename = self.workoutList_files[self.workoutList.currentRow()-2]
+		destination = QFileDialog.getSaveFileName(self, "Save File","","CSV Files (*.csv)")[0]
+		if destination != "":
+			print("attempting translation of ", filename, destination)
+			garmin_translate.do_translation(self.routines_folder+"/"+filename,destination,self.routines_folder+"/"+"garmin_translations.json")
 	
 	#
 	# Takes a json object (dict etc) that has been imported from hevy file and strips to necessities
