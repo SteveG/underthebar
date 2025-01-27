@@ -47,6 +47,7 @@ import utb_plot_volume_week
 import utb_plot_body_measures
 import utb_plot_bodypart_reps
 import utb_plot_bodypart_sets
+import utb_plot_weightwilks
 import utb_plot_workouts
 		
 class Analysis(QWidget):
@@ -96,6 +97,7 @@ class Analysis(QWidget):
 		self.graphList.addItem("Cumulative Distance")
 		self.graphList.addItem("Cumulative Reps")
 		self.graphList.addItem("Estimated One Rep Max")
+		self.graphList.addItem("Max Weight Wilks")
 		self.graphList.addItem("Reps Max Record")
 		self.graphList.addItem("Reps Max Record Year")
 		self.graphList.addItem("The Big Three")
@@ -134,9 +136,10 @@ class Analysis(QWidget):
 			self.initialise()
 			
 	def generate_clicked(self):
-		print("(re)generate!")
+		
 		graphSelected = self.graphList.currentItem().text()
 		optionSelected = self.optionList.currentItem().text()
+		print("(re)generate!", graphSelected, optionSelected)
 		
 		if graphSelected == "Reps Max Record":
 			utb_plot_rep_max.generate_plot_rep_max(optionSelected, self.svgWidget.width(), self.svgWidget.height())
@@ -286,6 +289,15 @@ class Analysis(QWidget):
 		elif graphSelected == "Body Measures":
 			utb_plot_body_measures.generate_plot_body_measures(optionSelected, self.svgWidget.width(), self.svgWidget.height())
 			filename = "plot_bodymeasures_"+optionSelected+'.svg'	
+			if os.path.exists(self.user_folder+"/"+filename):	
+				self.svgWidget.load(self.user_folder+"/"+filename)
+				self.optionList.currentItem().setCheckState(Qt.Checked)
+			else:
+				self.svgWidget.load(self.script_folder+"/icons/chart-line-solid.svg")
+		
+		elif graphSelected == "Max Weight Wilks":
+			utb_plot_weightwilks.generate_plot_weightwilks(optionSelected, self.svgWidget.width(), self.svgWidget.height())
+			filename = "plot_weightwilks_"+re.sub(r'\W+', '', optionSelected)+'.svg'	
 			if os.path.exists(self.user_folder+"/"+filename):	
 				self.svgWidget.load(self.user_folder+"/"+filename)
 				self.optionList.currentItem().setCheckState(Qt.Checked)
@@ -469,7 +481,17 @@ class Analysis(QWidget):
 					newOpt.setCheckState(Qt.Checked)
 				self.optionList.addItem(newOpt)		
 		
-		
+		elif selected_text == "Max Weight Wilks":
+			self.options = utb_plot_weightwilks.generate_options_weightwilks()
+			for new_item in sorted(self.options.keys()):
+				newOpt = QListWidgetItem(str(new_item))
+				newOpt.setFlags(newOpt.flags() | Qt.ItemIsUserCheckable)
+				newOpt.setCheckState(Qt.Unchecked)
+				if self.options[new_item]:
+					newOpt.setCheckState(Qt.Checked)
+				self.optionList.addItem(newOpt)
+				
+				
 		elif selected_text == "Workouts":
 			self.options = utb_plot_workouts.generate_options_workouts()
 			for new_item in sorted(self.options.keys()):
@@ -639,7 +661,13 @@ class Analysis(QWidget):
 					self.svgWidget.load(self.user_folder+"/"+filename)
 				else:
 					self.svgWidget.load(self.script_folder+"/icons/chart-line-solid.svg")
-					
+			
+			elif self.graphList.currentItem().text() == "Max Weight Wilks":
+				filename = "plot_weightwilks_"+re.sub(r'\W+', '', selectedItemText)+'.svg'	
+				if os.path.exists(self.user_folder+"/"+filename):	
+					self.svgWidget.load(self.user_folder+"/"+filename)
+				else:
+					self.svgWidget.load(self.script_folder+"/icons/chart-line-solid.svg")
 					
 			elif self.graphList.currentItem().text() == "Workouts":
 				filename = "plot_plot_workouts_permonth"+'.svg'	
