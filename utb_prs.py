@@ -71,12 +71,12 @@ def do_the_thing():
 					if reps >= 1 and workout_date > start_of_year and weight > exercises_available[set_group["title"]].get("best_weight_this_year",0):
 						exercises_available[set_group["title"]]["best_weight_this_year"] = weight
 						exercises_available[set_group["title"]]["best_weight_this_year_date"] = workout_date
-					if reps >= 5 and weight > exercises_available[set_group["title"]].get("5RM_weight",0):
-						exercises_available[set_group["title"]]["5RM_weight"] = weight
-						exercises_available[set_group["title"]]["5RM_weight_date"] = workout_date
-					if reps >= 10 and weight > exercises_available[set_group["title"]].get("10RM_weight",0):
-						exercises_available[set_group["title"]]["10RM_weight"] = weight
-						exercises_available[set_group["title"]]["10RM_weight_date"] = workout_date
+					if reps >= 5 and weight > exercises_available[set_group["title"]].get("5_rep_max_weight",0):
+						exercises_available[set_group["title"]]["5_rep_max_weight"] = weight
+						exercises_available[set_group["title"]]["5_rep_max_weight_date"] = workout_date
+					if reps >= 10 and weight > exercises_available[set_group["title"]].get("10_rep_max_weight",0):
+						exercises_available[set_group["title"]]["10_rep_max_weight"] = weight
+						exercises_available[set_group["title"]]["10_rep_max_weight_date"] = workout_date
 			
 			elif set_group["exercise_type"] == "reps_only" or set_group["exercise_type"] == "bodyweight_reps" :
 				for workout_set in set_group['sets']:
@@ -132,15 +132,15 @@ def do_the_thing():
 				"type": "best_weight_this_year","record": exercises_available[exer]["best_weight_this_year"],
 				"date":exercises_available[exer]["best_weight_this_year_date"]}
 			the_main_dict["data"].append(record_dict)
-		if "5RM_weight" in exercises_available[exer]:
+		if "5_rep_max_weight" in exercises_available[exer]:
 			record_dict = {"exercise_template_id": exercises_available[exer]["template_id"],
-				"type": "5RM_weight","record": exercises_available[exer]["5RM_weight"],
-				"date":exercises_available[exer]["5RM_weight_date"]}
+				"type": "5_rep_max_weight","record": exercises_available[exer]["5_rep_max_weight"],
+				"date":exercises_available[exer]["5_rep_max_weight_date"]}
 			the_main_dict["data"].append(record_dict)
-		if "10RM_weight" in exercises_available[exer]:
+		if "10_rep_max_weight" in exercises_available[exer]:
 			record_dict = {"exercise_template_id": exercises_available[exer]["template_id"],
-				"type": "10RM_weight","record": exercises_available[exer]["10RM_weight"],
-				"date":exercises_available[exer]["10RM_weight_date"]}
+				"type": "10_rep_max_weight","record": exercises_available[exer]["10_rep_max_weight"],
+				"date":exercises_available[exer]["10_rep_max_weight_date"]}
 			the_main_dict["data"].append(record_dict)
 		if "best_reps" in exercises_available[exer]:
 			record_dict = {"exercise_template_id": exercises_available[exer]["template_id"],
