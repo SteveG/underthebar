@@ -447,6 +447,9 @@ class Profile(QWidget):
 			
 			# populate calendar with dates, starting at day 0 of 52 weeks ago TODO is this too much work for this thread?
 			cal_start_date = datetime.datetime.now().astimezone()-datetime.timedelta(weeks=52)
+			#print("starting date",cal_start_date)
+			new_cal_start_date = cal_start_date.replace(day=1,hour=0,minute=0,second=0,microsecond=0)
+			#print("new starting_date", new_cal_start_date)
 			
 			# get dates of relevant workouts
 			fileslist = sorted(os.listdir(workouts_folder), reverse=True)
@@ -468,7 +471,7 @@ class Profile(QWidget):
 							self.relevant_workout_files[workout_date_string] = [file,]
 						#print(workout_date.strftime("%Y-%m-%d"))
 						
-						if workout_date < (cal_start_date - datetime.timedelta(weeks=1)):
+						if workout_date < new_cal_start_date: #(cal_start_date - datetime.timedelta(weeks=1)):
 							break
 			
 			
