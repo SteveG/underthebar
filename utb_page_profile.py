@@ -32,6 +32,7 @@ from PySide2.QtWidgets import (
     QTableWidgetItem,
     QHeaderView,
     QToolButton,
+	QComboBox,
 )
 from PySide2.QtGui import QPalette, QColor, QWindow
 from PySide2.QtGui import QIcon, QPixmap,QImage, QBrush, QPainter
@@ -186,9 +187,18 @@ class Profile(QWidget):
 		self.feedloadbutton.setIcon(self.loadIcon(self.script_folder+"/icons/plus-solid.svg"))
 		self.feedloadbutton.setFixedWidth(50)
 		self.feedloadbutton.clicked.connect(self.feed_load_button)
+		
+		### NEW filter combo box for the calendar
+		self.filterCombo = QComboBox()
+		self.filterCombo.setFixedHeight(27)
+		self.filterCombo.addItem("")
+		self.filterCombo.addItem("Load")
+		self.filterCombo.currentIndexChanged.connect(self.filterChanged)
+		###
 		feedbuttonlayout.addWidget(feedlabel)
 		feedbuttonlayout.addWidget(self.feedreloadbutton)
 		feedbuttonlayout.addWidget(self.feedloadbutton)
+		feedbuttonlayout.addWidget(self.filterCombo)
 		#feedbuttonlayout.addStretch(10)
 		feedlayout.addLayout(feedbuttonlayout)
 		
@@ -529,6 +539,24 @@ class Profile(QWidget):
 				if this_date.strftime("%Y-%m-%d") in relevant_workout_dates:
 					self.calendarWidget.item(this_day+1,week).setBackground(self.palette().color(QPalette.ToolTipBase))
 					self.calendar_link[(this_day+1,week)]=this_date.strftime("%Y-%m-%d")
+					
+					### NEW check if a filtered item???, if its highlight it
+					if self.filterCombo.currentIndex() != 0:
+						#print("NEED TO APPLY FILTER", self.filterCombo.currentText())
+						for file in self.relevant_workout_files[this_date.strftime("%Y-%m-%d")]:
+							#print(file)
+							with open(self.workouts_folder+"/"+file, 'r') as loadfile:
+								temp_data = json.load(loadfile)
+								if self.has_filtereditem(temp_data, self.filterCombo.currentText()):
+									self.calendarWidget.item(this_day+1,week).setBackground(QColor("midnightblue").darker(200))
+								
+								#fancystring += self.get_fancy_text(temp_data)
+								# body picture
+								#body_things = self.get_bodyparts(temp_data)
+								#bodypart_list = bodypart_list + body_things[0]
+								#other_bodypart_list = other_bodypart_list + body_things[1]
+					###
+					
 					if this_date.strftime("%Y-%m-%d") == relevant_workout_dates[0]:
 						self.calendarWidget.setCurrentCell(this_day+1,week,QItemSelectionModel.ClearAndSelect)
 						#print("date of last workout",this_date.strftime("%Y-%m-%d"))
@@ -695,6 +723,48 @@ class Profile(QWidget):
 				else:
 					self.deleteItemsOfLayout(item.layout())
 
+	def filterChanged(self, index):
+		print("filter changed", index)
+		
+		if index ==0:
+			print("nothing selected in filter")
+			self.do_update()
+		elif index ==1 and self.filterCombo.currentText()=="Load":
+			print("do the load...")
+			
+			bodyparts = []
+			exercises = []
+			
+			for the_date in self.relevant_workout_files.keys():
+				for file in self.relevant_workout_files[the_date]:
+					with open(self.workouts_folder+"/"+file, 'r') as loadfile:
+						temp_data = json.load(loadfile)
+						temp_exercises, temp_bp = self.get_exercisesandbodyparts(temp_data)
+						
+						for exercise in temp_exercises:
+							if exercise not in exercises:
+								exercises.append(exercise)
+						for bodypart in temp_bp:
+							if bodypart not in bodyparts:
+								bodyparts.append(bodypart)
+			
+			self.filterCombo.addItems(sorted(bodyparts))
+			self.filterCombo.insertSeparator(self.filterCombo.count())
+			self.filterCombo.addItems(sorted(exercises))
+			
+			self.filterCombo.blockSignals(True)
+			self.filterCombo.setCurrentIndex(0)
+			self.filterCombo.removeItem(1)
+			self.filterCombo.showPopup()
+			self.filterCombo.blockSignals(False)
+			
+		else:
+			print("selected filter item", self.filterCombo.currentText())
+			filterText = self.filterCombo.currentText()
+			self.do_update()
+	
+			
+		
 	
 	def calendar_selection(self):
 		the_item = self.calendarWidget.selectedItems()[0]
@@ -930,6 +1000,23 @@ class Profile(QWidget):
 		fancystring += "\n"	
 		return fancystring
 	
+	# returns true if workout json has filtered item in exercises or bodyparts
+	def has_filtereditem(self, workoutjson, filteredItem):
+		exercises = []
+		bodyparts = []
+		for exercise in workoutjson["exercises"]:
+			title = exercise["title"]
+			if title not in exercises:
+				exercises.append(title)
+			primarybodypart = exercise["muscle_group"]
+			if primarybodypart not in bodyparts:
+				bodyparts.append(primarybodypart)
+			for other_bp in exercise["other_muscles"]:
+				if other_bp not in bodyparts:
+					bodyparts.append(other_bp)
+		if filteredItem in exercises or filteredItem in bodyparts:
+			return True
+	
 	# this is used when clicking on the calendar widget, returns the primary, secondary bodyparts in a workout
 	def get_bodyparts(self, workoutjson):
 	    bodyparts = []
@@ -943,6 +1030,23 @@ class Profile(QWidget):
 	                other_bodyparts.append(other_bp)
 	    #print(bodyparts)  
 	    return bodyparts, other_bodyparts
+		
+	# this used for the filter combo box, returns the exercises and all bodyparts in a workout
+	def get_exercisesandbodyparts(self, workoutjson):
+		exercises = []
+		bodyparts = []
+		for exercise in workoutjson["exercises"]:
+			title = exercise["title"]
+			if title not in exercises:
+				exercises.append(title)
+			primarybodypart = exercise["muscle_group"]
+			if primarybodypart not in bodyparts:
+				bodyparts.append(primarybodypart)
+			for other_bp in exercise["other_muscles"]:
+				if other_bp not in bodyparts:
+					bodyparts.append(other_bp)
+		return exercises, bodyparts
+	
 	
 	def feedScrollChanged(self, value): #https://doc.qt.io/qt-5/qabstractslider.html#valueChanged
 		if value >= self.feedList.verticalScrollBar().maximum()-1000 and self.feedloadbutton.isEnabled(): #if we're at the end
