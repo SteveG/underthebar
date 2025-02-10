@@ -152,7 +152,7 @@ class Setting(QWidget):
 		#self.stravaimportbtn.clicked.connect(self.batch_button_pushed)
 		self.stravaimportbtn.clicked.connect(lambda *args, x="strava_import_batch": self.batch_button_pushed(x))
 		workoutsyncgrid.addWidget(self.stravaimportbtn,3,1)
-		self.stravaimportstateLabel = QLabel("Import most recent run/walk")
+		self.stravaimportstateLabel = QLabel("Import most recent run/walk/hike/ride")
 		self.stravaimportstateLabel.setFixedWidth(200)
 		workoutsyncgrid.addWidget(self.stravaimportstateLabel,3,2)
 		

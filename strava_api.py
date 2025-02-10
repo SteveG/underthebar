@@ -198,6 +198,35 @@ def do_the_thing():
 	athlete = client.get_athlete()
 	print("Hello from Strava, {}".format(athlete.firstname))
 	activities = client.get_activities(limit=10)
+
+	# Define activity object for easy adding and searching
+	class ActivityType:
+		def __init__(self, type, title, id):
+			self.type = type
+			self.title = title
+			self.id = id
+		
+		# matches if the activity type matches directly, or if it matches the root of the type
+		def matches(self, activity_type):
+			return (activity_type == self.type or 
+					str(activity_type) == f"root='{self.type}'")
+	
+	#define activities that can be pulled into hevy
+	SUBMITTABLE_ACTIVITY_TYPES = [
+		ActivityType("Run", "Running", "AC1BB830"),
+		ActivityType("Ride", "Cycling", "D8F7F851"),
+		ActivityType("Walk", "Walking", "33EDD7DB"),
+		ActivityType("Hike", "Hiking", "1C34A172"),
+
+	]
+
+	# Note that this is a custom exercise that only exists for me in Hevy...
+	if session_data["user-id"] == "f21f5af1-a602-48f0-82fb-ed09bc984326":
+		SUBMITTABLE_ACTIVITY_TYPES.append(ActivityType("VirtualRide", "Cycling (Virtual)", "89f3ed93-5418-4cc6-a114-0590f2977ae8"))
+
+
+	
+
 	for activity in activities:
 		#print("{0.type} {0.moving_time} {0.distance} {0.start_date} {0.average_heartrate} {0.max_heartrate} {0.average_watts} {0.max_watts}".format(activity))
 		print(activity.type,activity.name, activity.start_date)
@@ -207,114 +236,34 @@ def do_the_thing():
 		# Here handle the submittable activities, we only want to submit one of those
 		# For the activity we want we'll modify the hevy workout template
 		do_submit = False
-		if activity.type == "Run" or str(activity.type) == "root='Run'":
-			activity = client.get_activity(activity.id)
-			run_template["workout"]["name"] = activity.name
-			run_template["workout"]["exercises"][0]["title"] = "Running"
-			run_template["workout"]["exercises"][0]["id"] = "AC1BB830"
+		for submittable_activity_type in SUBMITTABLE_ACTIVITY_TYPES:
+			
+			if submittable_activity_type.matches(activity.type):
+				print("Importing ",activity.name, activity.start_date)
+				activity = client.get_activity(activity.id)
 
-			run_template["workout"]["startTime"] = int(activity.start_date.timestamp())
-			run_template["workout"]["endTime"] = int(activity.start_date.timestamp()+activity.moving_time.total_seconds())
-			run_template["workout"]["exercises"][0]["sets"][0]["duration"] = int(activity.moving_time.total_seconds())
-			run_template["workout"]["exercises"][0]["sets"][0]["distance"] = int(activity.distance)
-			
-			if activity.description:
-				run_template["workout"]["description"] = str(activity.description) + "\n\n"+run_template["workout"]["description"]			
-			
-			if activity.average_heartrate:
-				run_template["workout"]["exercises"][0]["notes"] = "Heartrate Avg: " + str(activity.average_heartrate) + "bpm, Max: " + str(activity.max_heartrate) + "bpm."
+				run_template["workout"]["name"] = activity.name
 
-			#print("got a run to submit")
-			do_submit = True        
+				# Pulls data from the constants table
+				run_template["workout"]["exercises"][0]["title"] = submittable_activity_type.title
+				run_template["workout"]["exercises"][0]["id"] = submittable_activity_type.id
 
-		# Note that this is a custom exercise that only exists for me in Hevy...
-		elif ((activity.type == "VirtualRide" or str(activity.type) == "root='VirtualRide'") and
-				session_data["user-id"] == "f21f5af1-a602-48f0-82fb-ed09bc984326"):
-			activity = client.get_activity(activity.id)
-			run_template["workout"]["name"] = activity.name #"Virtual Ride (import)"
-			run_template["workout"]["exercises"][0]["title"] = "Cycling (Virtual)"
-			run_template["workout"]["exercises"][0]["id"] = "89f3ed93-5418-4cc6-a114-0590f2977ae8"
+				run_template["workout"]["startTime"] = int(activity.start_date.timestamp())
+				run_template["workout"]["endTime"] = int(activity.start_date.timestamp()+activity.moving_time)
+				run_template["workout"]["exercises"][0]["sets"][0]["duration"] = int(activity.moving_time)
+				run_template["workout"]["exercises"][0]["sets"][0]["distance"] = int(activity.distance)
 
-			run_template["workout"]["startTime"] = int(activity.start_date.timestamp())
-			run_template["workout"]["endTime"] = int(activity.start_date.timestamp()+activity.moving_time.total_seconds())
-			run_template["workout"]["exercises"][0]["sets"][0]["duration"] = int(activity.moving_time.total_seconds())
-			run_template["workout"]["exercises"][0]["sets"][0]["distance"] = int(activity.distance)
+				if activity.description:
+					run_template["workout"]["description"] = str(activity.description) + "\n\n"+run_template["workout"]["description"]			
 			
-			if activity.description:
-				run_template["workout"]["description"] = str(activity.description) + "\n\n"+run_template["workout"]["description"]
-			
-			if activity.average_heartrate:
-				run_template["workout"]["exercises"][0]["notes"] = "Heartrate Avg: " + str(activity.average_heartrate) + "bpm, Max: " + str(activity.max_heartrate) + "bpm."
-			if activity.average_watts:
-				run_template["workout"]["exercises"][0]["notes"] += "\nPower Avg: " + str(activity.average_watts) + "W, Max: " + str(activity.max_watts) + "W."
-			
-			#print(run_template)
-			do_submit = True
+				if activity.average_heartrate:
+					run_template["workout"]["exercises"][0]["notes"] = "Heartrate Avg: " + str(activity.average_heartrate) + "bpm, Max: " + str(activity.max_heartrate) + "bpm."
 
-		elif activity.type == "Ride" or str(activity.type) == "root='Ride'":
-			activity = client.get_activity(activity.id)
-			run_template["workout"]["name"] = activity.name 
-			run_template["workout"]["exercises"][0]["title"] = "Cycling"
-			run_template["workout"]["exercises"][0]["id"] = "D8F7F851"
+				if activity.average_watts:
+					run_template["workout"]["exercises"][0]["notes"] += "\nPower Avg: " + str(activity.average_watts) + "W, Max: " + str(activity.max_watts) + "W."
 
-			run_template["workout"]["startTime"] = int(activity.start_date.timestamp())
-			run_template["workout"]["endTime"] = int(activity.start_date.timestamp()+activity.moving_time.total_seconds())
-			run_template["workout"]["exercises"][0]["sets"][0]["duration"] = int(activity.moving_time.total_seconds())
-			run_template["workout"]["exercises"][0]["sets"][0]["distance"] = int(activity.distance)
+				do_submit = True 
 			
-			if activity.description:
-				run_template["workout"]["description"] = str(activity.description) + "\n\n"+run_template["workout"]["description"]
-			
-			if activity.average_heartrate:
-				run_template["workout"]["exercises"][0]["notes"] = "Heartrate Avg: " + str(activity.average_heartrate) + "bpm, Max: " + str(activity.max_heartrate) + "bpm."
-			if activity.average_watts:
-				run_template["workout"]["exercises"][0]["notes"] += "\nPower Avg: " + str(activity.average_watts) + "W, Max: " + str(activity.max_watts) + "W."
-			
-			#print(run_template)
-			do_submit = True
-
-		# Standard walk exercise
-		elif activity.type == "Walk" or str(activity.type) == "root='Walk'":
-			activity = client.get_activity(activity.id)
-			run_template["workout"]["name"] = activity.name #"Walk (import)"
-			run_template["workout"]["exercises"][0]["title"] = "Walking"
-			run_template["workout"]["exercises"][0]["id"] = "33EDD7DB"
-
-			run_template["workout"]["startTime"] = int(activity.start_date.timestamp())
-			run_template["workout"]["endTime"] = int(activity.start_date.timestamp()+activity.moving_time)
-			run_template["workout"]["exercises"][0]["sets"][0]["duration"] = int(activity.moving_time)
-			run_template["workout"]["exercises"][0]["sets"][0]["distance"] = int(activity.distance)
-			
-			if activity.description:
-				run_template["workout"]["description"] = str(activity.description) + "\n\n"+run_template["workout"]["description"]
-			
-			if activity.average_heartrate:
-				run_template["workout"]["exercises"][0]["notes"] = "Heartrate Avg: " + str(activity.average_heartrate) + "bpm, Max: " + str(activity.max_heartrate) + "bpm."
-			
-			#print(run_template)
-			do_submit = True
-
-		# Hike exercise
-		elif activity.type == "Hike" or str(activity.type) == "root='Hike'":
-			activity = client.get_activity(activity.id)
-			run_template["workout"]["name"] = activity.name #"Hike (import)"
-			run_template["workout"]["exercises"][0]["title"] = "Hiking"
-			run_template["workout"]["exercises"][0]["id"] = "1C34A172"
-
-			run_template["workout"]["startTime"] = int(activity.start_date.timestamp())
-			run_template["workout"]["endTime"] = int(activity.start_date.timestamp()+activity.moving_time)
-			run_template["workout"]["exercises"][0]["sets"][0]["duration"] = int(activity.moving_time)
-			run_template["workout"]["exercises"][0]["sets"][0]["distance"] = int(activity.distance)
-			
-			if activity.description:
-				run_template["workout"]["description"] = str(activity.description) + "\n\n"+run_template["workout"]["description"]
-			
-			if activity.average_heartrate:
-				run_template["workout"]["exercises"][0]["notes"] = "Heartrate Avg: " + str(activity.average_heartrate) + "bpm, Max: " + str(activity.max_heartrate) + "bpm."
-			
-			#print(run_template)
-			do_submit = True
-
 		# Now log in to Hevy and do the submission
 		if do_submit:
 			do_submit = False
@@ -355,6 +304,9 @@ def do_the_thing():
 			print(r)
 			#sys.exit()
 			break
+		else:
+			print("No valid entries to import.")
+
 		
 
 
