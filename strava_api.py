@@ -281,8 +281,29 @@ def do_the_thing():
 			run_template["workout"]["exercises"][0]["id"] = "33EDD7DB"
 
 			run_template["workout"]["startTime"] = int(activity.start_date.timestamp())
-			run_template["workout"]["endTime"] = int(activity.start_date.timestamp()+activity.moving_time.total_seconds())
-			run_template["workout"]["exercises"][0]["sets"][0]["duration"] = int(activity.moving_time.total_seconds())
+			run_template["workout"]["endTime"] = int(activity.start_date.timestamp()+activity.moving_time)
+			run_template["workout"]["exercises"][0]["sets"][0]["duration"] = int(activity.moving_time)
+			run_template["workout"]["exercises"][0]["sets"][0]["distance"] = int(activity.distance)
+			
+			if activity.description:
+				run_template["workout"]["description"] = str(activity.description) + "\n\n"+run_template["workout"]["description"]
+			
+			if activity.average_heartrate:
+				run_template["workout"]["exercises"][0]["notes"] = "Heartrate Avg: " + str(activity.average_heartrate) + "bpm, Max: " + str(activity.max_heartrate) + "bpm."
+			
+			#print(run_template)
+			do_submit = True
+
+		# Hike exercise
+		elif activity.type == "Hike" or str(activity.type) == "root='Hike'":
+			activity = client.get_activity(activity.id)
+			run_template["workout"]["name"] = activity.name #"Hike (import)"
+			run_template["workout"]["exercises"][0]["title"] = "Hiking"
+			run_template["workout"]["exercises"][0]["id"] = "1C34A172"
+
+			run_template["workout"]["startTime"] = int(activity.start_date.timestamp())
+			run_template["workout"]["endTime"] = int(activity.start_date.timestamp()+activity.moving_time)
+			run_template["workout"]["exercises"][0]["sets"][0]["duration"] = int(activity.moving_time)
 			run_template["workout"]["exercises"][0]["sets"][0]["distance"] = int(activity.distance)
 			
 			if activity.description:
