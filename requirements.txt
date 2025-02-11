@@ -1,0 +1,7 @@
+matplotlib==3.10.0
+numpy==2.2.2
+PySide2==5.15.2.1
+PySide2==5.15.2.1
+python_dateutil==2.9.0.post0
+Requests==2.32.3
+stravalib==2.2
