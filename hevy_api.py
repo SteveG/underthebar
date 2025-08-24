@@ -575,7 +575,7 @@ def friends():
 	headers["auth-token"] = auth_token
 	
 	
-	url = "https://api.hevyapp.com/following/lazy_steve"	
+	url = "https://api.hevyapp.com/following/chronically_steve"	
 	s = requests.Session()	
 	r = s.get(url, headers=headers)	
 	following_data = r.json()
@@ -583,7 +583,7 @@ def friends():
 	for datum in following_data:
 		following.append(datum['username'])
 	
-	url = "https://api.hevyapp.com/followers/lazy_steve"	
+	url = "https://api.hevyapp.com/followers/chronically_steve"	
 	r = s.get(url, headers=headers)	
 	followers_data = r.json()
 	follower = []

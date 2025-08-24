@@ -77,44 +77,77 @@ def do_the_thing():
 	}
 
 	# JSON of a basic running workout, we'll just adjust this
+	# run_template = {
+	  # "workout": {
+		# "clientId": None,
+		# "name": "Running (import)",
+		# "description": "(Import from Strava)",
+		# "imageUrls": [],
+		# "exercises": [
+		  # {
+			# "title": "Running",
+			# "id": "AC1BB830",
+			# "autoRestTimerSeconds": 0,
+			# "notes": "",
+			# "routineNotes": "",
+			# "sets": [
+			  # {
+				# "index": 0,
+				# "completed": True,
+				# "indicator": "normal",
+				# "weight": None,
+				# "reps": None,
+				# "distance": 3200,
+				# "duration": 1453
+			  # }
+			# ]
+		  # }
+		# ],
+		# "startTime": 1644300575,
+		# "endTime": 1644302088,
+		# "useAutoDurationTimer": True,
+		# "trackWorkoutAsRoutine": False,
+		# "isPrivate": True, # allows testing without spamming ppls feeds
+		# "appleWatch": False
+	  # },
+	  # "emptyResponse": True,
+	  # "updateRoutineValues": False,
+	  # "shareToStrava": False
+	# }
 	run_template = {
 	  "workout": {
-		"clientId": None,
-		"name": "Running (import)",
+		"workout_id": "3413fa99-ace5-4209-b997-1ca3251f9fbc",
+		"title": "Running (import)",
 		"description": "(Import from Strava)",
-		"imageUrls": [],
+		"media": [],
 		"exercises": [
 		  {
 			"title": "Running",
-			"id": "AC1BB830",
-			"autoRestTimerSeconds": 0,
+			"exercise_template_id": "AC1BB830",
+			"rest_timer_seconds": 0,
 			"notes": "",
-			"routineNotes": "",
+			"volume_doubling_enabled": False,
 			"sets": [
 			  {
 				"index": 0,
-				"completed": True,
-				"indicator": "normal",
-				"weight": None,
-				"reps": None,
-				"distance": 3200,
-				"duration": 1453
+				"type": "normal",
+				"distance_meters": 10030,
+				"duration_seconds": 4101,
+				"completed_at": "2025-08-23T00:53:43.532Z"
 			  }
 			]
 		  }
 		],
-		"startTime": 1644300575,
-		"endTime": 1644302088,
-		"useAutoDurationTimer": True,
-		"trackWorkoutAsRoutine": False,
-#		"isPrivate": True, # allows testing without spamming ppls feeds
-		"appleWatch": False
+		"start_time": 1755906339,
+		"end_time": 1755910466,
+		"apple_watch": False,
+		"wearos_watch": False,
+		"is_private": False,
+		"is_biometrics_public": True
 	  },
-	  "emptyResponse": True,
-	  "updateRoutineValues": False,
-	  "shareToStrava": False
+	  "share_to_strava": False,
+	  "strava_activity_local_time": "2025-8-23T9:15:39Z"
 	}
-
 
 
 
@@ -242,28 +275,49 @@ def do_the_thing():
 				print("Importing ",activity.name, activity.start_date)
 				activity = client.get_activity(activity.id)
 
-				run_template["workout"]["name"] = activity.name
+				run_template["workout"]["title"] = activity.name
 
 				# Pulls data from the constants table
 				run_template["workout"]["exercises"][0]["title"] = submittable_activity_type.title
 				run_template["workout"]["exercises"][0]["id"] = submittable_activity_type.id
 
-				run_template["workout"]["startTime"] = int(activity.start_date.timestamp())
-				run_template["workout"]["endTime"] = int(activity.start_date.timestamp()+activity.moving_time)
-				run_template["workout"]["exercises"][0]["sets"][0]["duration"] = int(activity.moving_time)
+				run_template["workout"]["start_time"] = int(activity.start_date.timestamp())
+				run_template["workout"]["end_time"] = int(activity.start_date.timestamp()+activity.moving_time.total_seconds())
+				run_template["strava_activity_local_time"] = activity.start_date.strftime('%Y-%m-%dT%H:%M:%SZ')
+				run_template["workout"]["exercises"][0]["sets"][0]["duration"] = int(activity.moving_time.total_seconds())
 				run_template["workout"]["exercises"][0]["sets"][0]["distance"] = int(activity.distance)
+				run_template["workout"]["exercises"][0]["sets"][0]["completed_at"] = (activity.start_date+activity.moving_time).strftime('%Y-%m-%dT%H:%M:%SZ')
+				print("Completed at",run_template["workout"]["exercises"][0]["sets"][0]["completed_at"])
 
 				if activity.description:
 					run_template["workout"]["description"] = str(activity.description) + "\n\n"+run_template["workout"]["description"]			
 			
 				if activity.average_heartrate:
 					run_template["workout"]["exercises"][0]["notes"] = "Heartrate Avg: " + str(activity.average_heartrate) + "bpm, Max: " + str(activity.max_heartrate) + "bpm."
+					
+					
+					# PLAY WITH ADDING HEART RATE TO HEVY
+					print("Try heart rate stream")
+					streams = client.get_activity_streams(activity.id,types=["time","heartrate"], series_type="time", resolution="high")
+					print("Time data points",len(streams["time"].data))
+					print("Heartrate data points",len(streams["heartrate"].data))
+					samples = []
+					for datapoint in range(0,len(streams["time"].data)):
+						
+						#print({"timestamp_ms":int((activity.start_date.timestamp()+streams["time"].data[datapoint]+259200)*1000), "bpm":streams["heartrate"].data[datapoint]})
+						#samples.append({"timestamp_ms":int((activity.start_date.timestamp()+streams["time"].data[datapoint])*1000), "bpm":streams["heartrate"].data[datapoint]})
+						samples.append({"timestamp_ms":int((1755906339+streams["time"].data[datapoint])*1000), "bpm":streams["heartrate"].data[datapoint]}) #time from template
+					
+					run_template["workout"]["biometrics"] = {"total_calories": activity.calories,"heart_rate_samples":samples}
+					#print(run_template)
 
 				if activity.average_watts:
 					run_template["workout"]["exercises"][0]["notes"] += "\nPower Avg: " + str(activity.average_watts) + "W, Max: " + str(activity.max_watts) + "W."
 
+				#print("\n",json.dumps(run_template,indent=4),"\n")
 				do_submit = True 
-			
+		#do_submit = False	
+		
 		# Now log in to Hevy and do the submission
 		if do_submit:
 			do_submit = False
@@ -290,17 +344,20 @@ def do_the_thing():
 			
 			# generate uuid using workout start time as seed, so is repeatable (might prevent submitting duplicates?)
 			rnd = random.Random()
-			rnd.seed(run_template["workout"]["startTime"])
+			#rnd.seed(run_template["workout"]["startTime"])
+			rnd.seed(run_template["workout"]["start_time"])
 			local_id = uuid.UUID(int=rnd.getrandbits(128), version=4)
-			run_template["workout"]["clientId"] = str(local_id)
+			#run_template["workout"]["clientId"] = str(local_id)
+			run_template["workout"]["workout_id"] = str(local_id)
 			
 			#run_template["workout"]["clientId"] = str(uuid.uuid4()) # or totally random id
 
 
-			print("\n",json.dumps(run_template,indent=4),"\n")
+			#print("\n",json.dumps(run_template,indent=4),"\n")
 			#sys.exit()
 
-			r = s.post('https://api.hevyapp.com/workout', data=json.dumps(run_template), headers=headers)
+			#r = s.post('https://api.hevyapp.com/workout', data=json.dumps(run_template), headers=headers)
+			r = s.post('https://api.hevyapp.com/v2/workout', data=json.dumps(run_template), headers=headers)
 			print(r)
 			#sys.exit()
 			break
