@@ -279,15 +279,16 @@ def do_the_thing():
 
 				# Pulls data from the constants table
 				run_template["workout"]["exercises"][0]["title"] = submittable_activity_type.title
-				run_template["workout"]["exercises"][0]["id"] = submittable_activity_type.id
+				run_template["workout"]["exercises"][0]["exercise_template_id"] = submittable_activity_type.id
 
 				run_template["workout"]["start_time"] = int(activity.start_date.timestamp())
 				run_template["workout"]["end_time"] = int(activity.start_date.timestamp()+activity.moving_time.total_seconds())
 				run_template["strava_activity_local_time"] = activity.start_date.strftime('%Y-%m-%dT%H:%M:%SZ')
-				run_template["workout"]["exercises"][0]["sets"][0]["duration"] = int(activity.moving_time.total_seconds())
-				run_template["workout"]["exercises"][0]["sets"][0]["distance"] = int(activity.distance)
+				run_template["workout"]["exercises"][0]["sets"][0]["duration_seconds"] = int(activity.moving_time.total_seconds())
+				run_template["workout"]["exercises"][0]["sets"][0]["distance_meters"] = int(activity.distance)
 				run_template["workout"]["exercises"][0]["sets"][0]["completed_at"] = (activity.start_date+activity.moving_time).strftime('%Y-%m-%dT%H:%M:%SZ')
 				print("Completed at",run_template["workout"]["exercises"][0]["sets"][0]["completed_at"])
+				print("\n",json.dumps(run_template,indent=4),"\n")
 
 				if activity.description:
 					run_template["workout"]["description"] = str(activity.description) + "\n\n"+run_template["workout"]["description"]			
@@ -305,8 +306,8 @@ def do_the_thing():
 					for datapoint in range(0,len(streams["time"].data)):
 						
 						#print({"timestamp_ms":int((activity.start_date.timestamp()+streams["time"].data[datapoint]+259200)*1000), "bpm":streams["heartrate"].data[datapoint]})
-						#samples.append({"timestamp_ms":int((activity.start_date.timestamp()+streams["time"].data[datapoint])*1000), "bpm":streams["heartrate"].data[datapoint]})
-						samples.append({"timestamp_ms":int((1755906339+streams["time"].data[datapoint])*1000), "bpm":streams["heartrate"].data[datapoint]}) #time from template
+						samples.append({"timestamp_ms":int((activity.start_date.timestamp()+streams["time"].data[datapoint])*1000), "bpm":streams["heartrate"].data[datapoint]})
+						#samples.append({"timestamp_ms":int((1755906339+streams["time"].data[datapoint])*1000), "bpm":streams["heartrate"].data[datapoint]}) #time from template
 					
 					run_template["workout"]["biometrics"] = {"total_calories": activity.calories,"heart_rate_samples":samples}
 					#print(run_template)
@@ -317,6 +318,7 @@ def do_the_thing():
 				#print("\n",json.dumps(run_template,indent=4),"\n")
 				do_submit = True 
 		#do_submit = False	
+		#return
 		
 		# Now log in to Hevy and do the submission
 		if do_submit:
