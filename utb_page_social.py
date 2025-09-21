@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Under the Bar - Profile Page
+"""Under the Bar - Social Page
 
-This file provides the main profile page for the application, with basic account information, a Hevy feed, calendar heat map, etc.
+This file provides the social page where you can see friends etc.
+Copied the profile page to start, so this is a huge mess at the moment. But functions.
 """
 
 import sys
@@ -26,6 +27,7 @@ from PySide2.QtWidgets import (
     QGridLayout,
     QWidget,
     QListWidget,
+	QListWidgetItem,
     QAbstractItemView,
     QListWidgetItem,
     QTableWidget,
@@ -44,10 +46,10 @@ import textwrap
 import utb_plot_body_measures
 	
 		
-class Profile(QWidget):
+class Social(QWidget):
 
 	def __init__(self, color):
-		super(Profile, self).__init__()
+		super(Social, self).__init__()
 		self.script_folder = os.path.split(os.path.abspath(__file__))[0]
 		pagelayout = QVBoxLayout()
 		self.setLayout(pagelayout)
@@ -83,35 +85,7 @@ class Profile(QWidget):
 		user_folder = utb_folder + "/user_" + session_data["user-id"]	
 		workouts_folder = user_folder + "/workouts"	
 		self.workouts_folder = user_folder + "/workouts"
-		account_data = None
-		if os.path.exists(user_folder+"/account.json"):	
-			with open(user_folder+"/account.json", 'r') as file:
-				account_data = json.load(file)
-				if "full_name" not in account_data["data"]:
-					account_data["data"]["full_name"] = ""
-				if "description" not in account_data["data"]:
-					account_data["data"]["description"] = ""
-		else:
-			account_data = {"data":{"username":"Please download data.",
-				"full_name":"Please download data.",
-				"description":"Bottom left to download.\n\nThe gear icon.",
-				"follower_count": 0,
-				"following_count":0}}
-		workoutcount_data = None
-		if os.path.exists(user_folder+"/workout_count.json"):	
-			with open(user_folder+"/workout_count.json", 'r') as file:
-				workoutcount_data = json.load(file)
-		else:
-			workoutcount_data = {"data": {"workout_count": 0}}
-		# here we are going to get the preferred units of the user
-		if os.path.exists(user_folder+"/user_preferences.json"):
-			with open(user_folder+"/user_preferences.json", 'r') as file:	
-				preference_data = json.load(file)
-			self.weight_unit = preference_data["data"]["weight_unit"]
-			self.distance_unit = preference_data["data"]["distance_unit"]
-			self.body_measurement_unit = preference_data["data"]["body_measurement_unit"]
-		else:
-			self.weight_unit = "kg"
+
 		
 		
 		#pagelayout = QVBoxLayout()
@@ -120,51 +94,41 @@ class Profile(QWidget):
 		#self.layout().addStretch()
 
 		toplayout.addStretch()
-		self.piclabel = QLabel("image")
-		if os.path.exists(user_folder+"/profileimage"):
-			pixmap = QPixmap(user_folder+"/profileimage")#.scaled(250,250)
-			pixmap = self.makeProfileImage(pixmap)
-			self.piclabel.setPixmap(pixmap)
-		else:
-			script_folder = os.path.split(os.path.abspath(__file__))[0]
-			pixmap = QPixmap(script_folder+"/icons/user-solid.svg").scaled(250,250)
-			self.piclabel.setPixmap(pixmap)
-		self.piclabel.setFixedSize(250,250)
-		toplayout.addWidget(self.piclabel)
+
+		# toplayout.addWidget(self.piclabel)
 	
-		detailslayout = QVBoxLayout()
-		#detailslayout.addWidget(QLabel("Details"))
-		detailsgrid = QGridLayout()
-		detailsgrid.addWidget(QLabel("<b>User name:</b>"), 0,0)
-		self.usernameLabel = QLabel(account_data["data"]["username"])
-		detailsgrid.addWidget(self.usernameLabel, 0,1)
-		detailsgrid.addWidget(QLabel("<b>Full name:</b>"), 1,0)
-		self.fullnameLabel = QLabel(account_data["data"]["full_name"])
-		detailsgrid.addWidget(self.fullnameLabel, 1,1)
-		detailsgrid.addWidget(QLabel("<b>Description:</b>"), 2,0, Qt.AlignTop)
-		self.detailLabel = QLabel(account_data["data"]["description"])
-		self.detailLabel.setWordWrap(True)
-		self.detailLabel.setFixedWidth(300)
-		detailsgrid.addWidget(self.detailLabel, 2,1)
-		detailsgrid.addWidget(QLabel("<b>Followers:</b>"), 3,0)
-		self.followersLabel = QLabel(str(account_data["data"]["follower_count"]))
-		detailsgrid.addWidget(self.followersLabel, 3,1)
-		detailsgrid.addWidget(QLabel("<b>Following:</b>"), 4,0)
-		self.followingLabel = QLabel(str(account_data["data"]["following_count"]))
-		detailsgrid.addWidget(self.followingLabel, 4,1)
-		detailsgrid.addWidget(QLabel("<b>Workout count:</b>"), 5,0)
+		# detailslayout = QVBoxLayout()
+		# detailsgrid = QGridLayout()
+		# detailsgrid.addWidget(QLabel("<b>User name:</b>"), 0,0)
+		# self.usernameLabel = QLabel(account_data["data"]["username"])
+		# detailsgrid.addWidget(self.usernameLabel, 0,1)
+		# detailsgrid.addWidget(QLabel("<b>Full name:</b>"), 1,0)
+		# self.fullnameLabel = QLabel(account_data["data"]["full_name"])
+		# detailsgrid.addWidget(self.fullnameLabel, 1,1)
+		# detailsgrid.addWidget(QLabel("<b>Description:</b>"), 2,0, Qt.AlignTop)
+		# self.detailLabel = QLabel(account_data["data"]["description"])
+		# self.detailLabel.setWordWrap(True)
+		# self.detailLabel.setFixedWidth(300)
+		# detailsgrid.addWidget(self.detailLabel, 2,1)
+		# detailsgrid.addWidget(QLabel("<b>Followers:</b>"), 3,0)
+		# self.followersLabel = QLabel(str(account_data["data"]["follower_count"]))
+		# detailsgrid.addWidget(self.followersLabel, 3,1)
+		# detailsgrid.addWidget(QLabel("<b>Following:</b>"), 4,0)
+		# self.followingLabel = QLabel(str(account_data["data"]["following_count"]))
+		# detailsgrid.addWidget(self.followingLabel, 4,1)
+		# detailsgrid.addWidget(QLabel("<b>Workout count:</b>"), 5,0)
 		
-		localWorkoutCount = len(os.listdir(self.workouts_folder))
-		self.workoutcountLabel = QLabel()#str(workoutcount_data["data"]["workout_count"]))
-		self.workoutcountLabel.setText("Remote:"+str(workoutcount_data["data"]["workout_count"])+"\tLocal:"+str(localWorkoutCount))
-		detailsgrid.addWidget(self.workoutcountLabel, 5,1)
-		
+		# localWorkoutCount = len(os.listdir(self.workouts_folder))
+		# self.workoutcountLabel = QLabel()#str(workoutcount_data["data"]["workout_count"]))
+		# self.workoutcountLabel.setText("Remote:"+str(workoutcount_data["data"]["workout_count"])+"\tLocal:"+str(localWorkoutCount))
+		# detailsgrid.addWidget(self.workoutcountLabel, 5,1)
 		
 		
-		detailslayout.addLayout(detailsgrid)
-		#detailslayout.addStretch()
-		toplayout.addLayout(detailslayout)
-		toplayout.addStretch()
+		
+		# detailslayout.addLayout(detailsgrid)
+		# #detailslayout.addStretch()
+		# toplayout.addLayout(detailslayout)
+		# toplayout.addStretch()
 		
 		
 		
@@ -179,29 +143,121 @@ class Profile(QWidget):
 		feedlabel = QtSvg.QSvgWidget(self.script_folder+"/icons/hevy-logo.svg")
 		feedlabel.setFixedWidth(80)
 		feedlabel.setFixedHeight(19)
-		self.feedreloadbutton = QPushButton()# "Reload feed")
-		self.feedreloadbutton.setIcon(self.loadIcon(self.script_folder+"/icons/arrows-rotate-solid.svg"))
-		self.feedreloadbutton.setFixedWidth(50)
-		self.feedreloadbutton.clicked.connect(self.feed_reload_button)
-		self.feedloadbutton = QPushButton()
-		self.feedloadbutton.setIcon(self.loadIcon(self.script_folder+"/icons/plus-solid.svg"))
-		self.feedloadbutton.setFixedWidth(50)
-		self.feedloadbutton.clicked.connect(self.feed_load_button)
+		self.reloadbutton = QPushButton()# "Reload feed")
+		self.reloadbutton.setIcon(self.loadIcon(self.script_folder+"/icons/arrows-rotate-solid.svg"))
+		self.reloadbutton.setFixedWidth(50)
+		self.reloadbutton.clicked.connect(self.reload_button)
+		
+		thetip = """Welcome to the new Social page!
+
+The left column will show mutual friends, i.e. you follow each other!
+
+The next column shows information about changes to your follows
+along with non-mutual follows.
+
+The third column shows your squad. Those people who have liked one
+of your last 10 workouts, regardless of following state.
+
+Finally, on the right will display a users feed once you select one.
+
+The changes are from when you last reloaded the data using this button"""
+
+		self.reloadbutton.setToolTip(thetip)
+		
+		# self.feedloadbutton = QPushButton()
+		# self.feedloadbutton.setIcon(self.loadIcon(self.script_folder+"/icons/plus-solid.svg"))
+		# self.feedloadbutton.setFixedWidth(50)
+		# self.feedloadbutton.clicked.connect(self.feed_load_button)
 		
 		### NEW filter combo box for the calendar
-		self.filterCombo = QComboBox()
-		self.filterCombo.setFixedHeight(27)
-		self.filterCombo.addItem("")
-		self.filterCombo.addItem("Load")
-		self.filterCombo.currentIndexChanged.connect(self.filterChanged)
+		# self.filterCombo = QComboBox()
+		# self.filterCombo.setFixedHeight(27)
+		# self.filterCombo.addItem("")
+		# self.filterCombo.addItem("Load")
+		# self.filterCombo.currentIndexChanged.connect(self.filterChanged)
 		###
 		feedbuttonlayout.addWidget(feedlabel)
-		feedbuttonlayout.addWidget(self.feedreloadbutton)
-		feedbuttonlayout.addWidget(self.feedloadbutton)
-		feedbuttonlayout.addWidget(self.filterCombo)
+		feedbuttonlayout.addWidget(self.reloadbutton)
+		# feedbuttonlayout.addWidget(self.feedloadbutton)
+		# feedbuttonlayout.addWidget(self.filterCombo)
 		#feedbuttonlayout.addStretch(10)
 		feedlayout.addLayout(feedbuttonlayout)
 		
+		self.friendList = QListWidget()
+		self.friendList.setFixedWidth(300)
+		#self.friendList.setSelectionMode(QAbstractItemView.NoSelection)
+		self.friendList.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
+		self.friendList.setAlternatingRowColors(True)
+		self.friendList.setFocusPolicy(Qt.NoFocus);
+		self.friendList.verticalScrollBar().setSingleStep(15)
+		#self.friendList.verticalScrollBar().valueChanged.connect(self.feedScrollChanged) 
+		self.friendList.currentRowChanged.connect(self.friendListRowChanged)
+		feedlayout.addWidget(self.friendList)
+		
+		bottomlayout.addLayout(feedlayout)
+
+
+		self.followList = QListWidget()
+		self.followList.setFixedWidth(300)
+		#self.followList.setSelectionMode(QAbstractItemView.NoSelection)
+		self.followList.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
+		self.followList.setAlternatingRowColors(True)
+		self.followList.setFocusPolicy(Qt.NoFocus);
+		self.followList.verticalScrollBar().setSingleStep(15)
+		self.followList.currentRowChanged.connect(self.followListRowChanged)
+		bottomlayout.addWidget(self.followList)
+
+
+		self.squadList = QListWidget()
+		self.squadList.setFixedWidth(300)
+		#self.squadList.setSelectionMode(QAbstractItemView.NoSelection)
+		self.squadList.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
+		self.squadList.setAlternatingRowColors(True)
+		self.squadList.setFocusPolicy(Qt.NoFocus);
+		self.squadList.verticalScrollBar().setSingleStep(15)
+		self.squadList.currentRowChanged.connect(self.squadListRowChanged)
+		bottomlayout.addWidget(self.squadList)
+
+
+
+		
+		bottomrightlayout = QVBoxLayout()
+		# self.calendarWidget = QTableWidget(8,12)
+		# self.calendarWidget.horizontalHeader().hide()
+		# self.calendarWidget.horizontalHeader().setMinimumSectionSize(1)
+		# #calendarWidget.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents);
+		# self.calendarWidget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch);
+		# self.calendarWidget.verticalHeader().hide()
+		# self.calendarWidget.verticalHeader().setMinimumSectionSize(1)
+		# self.calendarWidget.verticalHeader().setSectionResizeMode(QHeaderView.Stretch);
+		# self.calendarWidget.setMaximumHeight(100)
+		
+		# self.calendarWidget.setSelectionBehavior( QAbstractItemView.SelectItems );
+		# self.calendarWidget.setSelectionMode( QAbstractItemView.SingleSelection );
+		# self.calendarWidget.itemSelectionChanged.connect(self.calendar_selection)
+		# bottomrightlayout.addWidget(self.calendarWidget)
+		#bottomrightlayout.addStretch()
+		
+		bottomcornerlayout = QHBoxLayout()
+
+		self.piclabel = QLabel("image")
+		if os.path.exists(user_folder+"/profileimage"):
+			pixmap = QPixmap(user_folder+"/profileimage")#.scaled(250,250)
+			pixmap = self.makeProfileImage(pixmap)
+			self.piclabel.setPixmap(pixmap)
+		else:
+			script_folder = os.path.split(os.path.abspath(__file__))[0]
+			pixmap = QPixmap(script_folder+"/icons/user-solid.svg").scaled(300,300)
+			self.piclabel.setPixmap(pixmap)
+		self.piclabel.setFixedSize(300,300)
+
+		bottomrightlayout.addWidget(self.piclabel)
+
+		
+		bottomcornerlayout.addStretch()
+
+		
+		bottomcornerlayout.addStretch()
 		self.feedList = QListWidget()
 		self.feedList.setFixedWidth(300)
 		self.feedList.setSelectionMode(QAbstractItemView.NoSelection)
@@ -209,65 +265,14 @@ class Profile(QWidget):
 		self.feedList.setAlternatingRowColors(True)
 		self.feedList.setFocusPolicy(Qt.NoFocus);
 		self.feedList.verticalScrollBar().setSingleStep(15)
-		self.feedList.verticalScrollBar().valueChanged.connect(self.feedScrollChanged) 
-		feedlayout.addWidget(self.feedList)
-		
-		bottomlayout.addLayout(feedlayout)
-		
-		bottomrightlayout = QVBoxLayout()
-		self.calendarWidget = QTableWidget(8,53)
-		self.calendarWidget.horizontalHeader().hide()
-		self.calendarWidget.horizontalHeader().setMinimumSectionSize(1)
-		#calendarWidget.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents);
-		self.calendarWidget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch);
-		self.calendarWidget.verticalHeader().hide()
-		self.calendarWidget.verticalHeader().setMinimumSectionSize(1)
-		self.calendarWidget.verticalHeader().setSectionResizeMode(QHeaderView.Stretch);
-		self.calendarWidget.setMaximumHeight(100)
-		
-		self.calendarWidget.setSelectionBehavior( QAbstractItemView.SelectItems );
-		self.calendarWidget.setSelectionMode( QAbstractItemView.SingleSelection );
-		self.calendarWidget.itemSelectionChanged.connect(self.calendar_selection)
-		bottomrightlayout.addWidget(self.calendarWidget)
-		#bottomrightlayout.addStretch()
-		
-		bottomcornerlayout = QHBoxLayout()
-
-
-		self.ownList = QListWidget()
-		self.ownList.setFixedWidth(300)
-		self.ownList.setSelectionMode(QAbstractItemView.NoSelection)
-		self.ownList.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
-		self.ownList.setAlternatingRowColors(False)
-		self.ownList.setFocusPolicy(Qt.NoFocus);
-		self.ownList.verticalScrollBar().setSingleStep(15)
-		bottomcornerlayout.addWidget(self.ownList)
-		
-		bottomcornerlayout.addStretch()
-		self.measureList = QListWidget()
-		self.measureList.setFixedWidth(300)
-		self.measureList.setSelectionMode(QAbstractItemView.NoSelection)
-		self.measureList.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
-		#self.measureList.setAlternatingRowColors(True)
-		self.measureList.setFocusPolicy(Qt.NoFocus);
-		self.measureList.verticalScrollBar().setSingleStep(15)
-		bottomcornerlayout.addWidget(self.measureList)
-		
-		bottomcornerlayout.addStretch()
-		self.recordList = QListWidget()
-		self.recordList.setFixedWidth(300)
-		self.recordList.setSelectionMode(QAbstractItemView.NoSelection)
-		self.recordList.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
-		#self.recordList.setAlternatingRowColors(True)
-		self.recordList.setFocusPolicy(Qt.NoFocus);
-		self.recordList.verticalScrollBar().setSingleStep(15)
-		bottomcornerlayout.addWidget(self.recordList)
+		self.feedList.verticalScrollBar().valueChanged.connect(self.feedScrollChanged)
+		bottomcornerlayout.addWidget(self.feedList)
 		
 		# Change appearance of scroll bars
 		#self.ownList.verticalScrollBar().setVisible(False)
-		self.ownList.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-		self.measureList.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-		self.recordList.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+		#self.ownList.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+		#self.measureList.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+		#self.recordList.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 		#self.ownList.verticalScrollBar().hide()
 		#self.ownList.verticalScrollBar().resize(2, 2)
 		
@@ -285,7 +290,7 @@ class Profile(QWidget):
 		
 		
 		# populate calendar with dates, starting at day 0 of 52 weeks ago TODO is this too much work for this thread?
-		cal_start_date = datetime.datetime.now().astimezone()-datetime.timedelta(weeks=52)
+		cal_start_date = datetime.datetime.now().astimezone()-datetime.timedelta(weeks=11)
 		
 #		# get dates of relevant workouts
 #		fileslist = sorted(os.listdir(workouts_folder), reverse=True)
@@ -311,69 +316,69 @@ class Profile(QWidget):
 #						break
 		
 		
-		cal_start_day = cal_start_date.isoweekday()%7
-		cal_start_date = cal_start_date-datetime.timedelta(days=cal_start_day)
-		cal_start_month = cal_start_date.month
-		cal_start_day = cal_start_date.isoweekday()%7
-		week = 0
-		day_count = 0
-		prev_day = 0
-		prev_month = -1
-		week_month_start = 0
-		colour_toggle = True
+		# cal_start_day = cal_start_date.isoweekday()%7
+		# cal_start_date = cal_start_date-datetime.timedelta(days=cal_start_day)
+		# cal_start_month = cal_start_date.month
+		# cal_start_day = cal_start_date.isoweekday()%7
+		# week = 0
+		# day_count = 0
+		# prev_day = 0
+		# prev_month = -1
+		# week_month_start = 0
+		# colour_toggle = True
 		
-		self.calendar_link={}
-		for i in range(500):
-			this_date = cal_start_date + datetime.timedelta(days=day_count)
-			this_day = this_date.isoweekday()%7
-			if this_day < prev_day:
-				week +=1
-				if week >=53:
-					break
-			if this_date.month != prev_month:
-				#print("new month",week_month_start,week,this_day)
-				if this_day ==0:
-					if week !=0:
-						self.calendarWidget.setSpan(0, week_month_start, 1, week-week_month_start)
-					#calendarWidget.setItem(0,week_month_start,QTableWidgetItem(calendar.month_name[prev_month]))
-					self.calendarWidget.setItem(0,week,QTableWidgetItem(calendar.month_abbr[this_date.month]))
-					if colour_toggle:
-						self.calendarWidget.item(0,week).setBackground(self.palette().color(QPalette.AlternateBase))
-					else:
-						self.calendarWidget.item(0,week).setBackground(self.palette().color(QPalette.Base))
-					week_month_start = week
-				else:
-					if week != 52:
-						self.calendarWidget.setSpan(0, week_month_start, 1, week-week_month_start+1)
-						#calendarWidget.setItem(0,week_month_start,QTableWidgetItem(calendar.month_name[prev_month]))
-						self.calendarWidget.setItem(0,week+1,QTableWidgetItem(calendar.month_abbr[this_date.month]))
-						#if self.calendarWidget.item(0, week+1) != None:
-						if colour_toggle:
-							self.calendarWidget.item(0,week+1).setBackground(self.palette().color(QPalette.AlternateBase))
-						else:
-							self.calendarWidget.item(0,week+1).setBackground(self.palette().color(QPalette.Base))
-						week_month_start = week+1
+		# self.calendar_link={}
+		# for i in range(500):
+			# this_date = cal_start_date + datetime.timedelta(days=day_count)
+			# this_day = this_date.isoweekday()%7
+			# if this_day < prev_day:
+				# week +=1
+				# if week >=12:
+					# break
+			# if this_date.month != prev_month:
+				# #print("new month",week_month_start,week,this_day)
+				# if this_day ==0:
+					# if week !=0:
+						# self.calendarWidget.setSpan(0, week_month_start, 1, week-week_month_start)
+					# #calendarWidget.setItem(0,week_month_start,QTableWidgetItem(calendar.month_name[prev_month]))
+					# self.calendarWidget.setItem(0,week,QTableWidgetItem(calendar.month_abbr[this_date.month]))
+					# if colour_toggle:
+						# self.calendarWidget.item(0,week).setBackground(self.palette().color(QPalette.AlternateBase))
+					# else:
+						# self.calendarWidget.item(0,week).setBackground(self.palette().color(QPalette.Base))
+					# week_month_start = week
+				# else:
+					# if week != 52:
+						# self.calendarWidget.setSpan(0, week_month_start, 1, week-week_month_start+1)
+						# #calendarWidget.setItem(0,week_month_start,QTableWidgetItem(calendar.month_name[prev_month]))
+						# self.calendarWidget.setItem(0,week+1,QTableWidgetItem(calendar.month_abbr[this_date.month]))
+						# #if self.calendarWidget.item(0, week+1) != None:
+						# if colour_toggle:
+							# self.calendarWidget.item(0,week+1).setBackground(self.palette().color(QPalette.AlternateBase))
+						# else:
+							# self.calendarWidget.item(0,week+1).setBackground(self.palette().color(QPalette.Base))
+						# week_month_start = week+1
 				
-				colour_toggle = not colour_toggle
-				prev_month = this_date.month
-			prev_day = this_day
-			#self.calendarWidget.setItem(this_day+1,week,QTableWidgetItem(str(this_date.day)))
-			self.calendarWidget.setItem(this_day+1,week,QTableWidgetItem())
-			if self.calendarWidget.item(this_day+1,week) == None:
-				break
-			if this_date.strftime("%Y-%m-%d") in relevant_workout_dates:
-#				self.calendarWidget.item(this_day+1,week).setBackground(self.palette().color(QPalette.ToolTipBase))
-#				self.calendar_link[(this_day+1,week)]=this_date.strftime("%Y-%m-%d")
-#				if this_date.strftime("%Y-%m-%d") == relevant_workout_dates[0]:
-#					self.calendarWidget.setCurrentCell(this_day+1,week,QItemSelectionModel.ClearAndSelect)
-#					#print("date of last workout",this_date.strftime("%Y-%m-%d"))
-				pass
-			elif colour_toggle:
-				self.calendarWidget.item(this_day+1,week).setBackground(self.palette().color(QPalette.Base))
-			else:
-				self.calendarWidget.item(this_day+1,week).setBackground(self.palette().color(QPalette.AlternateBase))
-			day_count += 1
-		self.calendarWidget.setSpan(0, week_month_start, 1, 53-week_month_start)
+				# colour_toggle = not colour_toggle
+				# prev_month = this_date.month
+			# prev_day = this_day
+			# #self.calendarWidget.setItem(this_day+1,week,QTableWidgetItem(str(this_date.day)))
+			# self.calendarWidget.setItem(this_day+1,week,QTableWidgetItem())
+			# if self.calendarWidget.item(this_day+1,week) == None:
+				# break
+			# if this_date.strftime("%Y-%m-%d") in relevant_workout_dates:
+# #				self.calendarWidget.item(this_day+1,week).setBackground(self.palette().color(QPalette.ToolTipBase))
+# #				self.calendar_link[(this_day+1,week)]=this_date.strftime("%Y-%m-%d")
+# #				if this_date.strftime("%Y-%m-%d") == relevant_workout_dates[0]:
+# #					self.calendarWidget.setCurrentCell(this_day+1,week,QItemSelectionModel.ClearAndSelect)
+# #					#print("date of last workout",this_date.strftime("%Y-%m-%d"))
+				# pass
+			# elif colour_toggle:
+				# self.calendarWidget.item(this_day+1,week).setBackground(self.palette().color(QPalette.Base))
+			# else:
+				# self.calendarWidget.item(this_day+1,week).setBackground(self.palette().color(QPalette.AlternateBase))
+			# day_count += 1
+		# self.calendarWidget.setSpan(0, week_month_start, 1, 12-week_month_start)
 		
 		
 		bottomlayout.addLayout(bottomrightlayout)
@@ -384,6 +389,7 @@ class Profile(QWidget):
 		self.feed_last_index = 0
 		
 		self.initialised = True
+		self.do_update()
 
 	def do_update(self):
 		print("updating")
@@ -402,30 +408,8 @@ class Profile(QWidget):
 			user_folder = utb_folder + "/user_" + session_data["user-id"]	
 			workouts_folder = user_folder + "/workouts"	
 			self.workouts_folder = user_folder + "/workouts"
-			account_data = None
-			if os.path.exists(user_folder+"/account.json"):	
-				with open(user_folder+"/account.json", 'r') as file:
-					account_data = json.load(file)
-					if "full_name" not in account_data["data"]:
-						account_data["data"]["full_name"] = ""
-					if "description" not in account_data["data"]:
-						account_data["data"]["description"] = ""
-				self.usernameLabel.setText(account_data["data"]["username"])
-				self.fullnameLabel.setText(account_data["data"]["full_name"])
-				self.detailLabel.setText(account_data["data"]["description"])
-				self.followersLabel.setText(str(account_data["data"]["follower_count"]))
-				self.followingLabel.setText(str(account_data["data"]["following_count"]))
-			else:
-				self.usernameLabel.setText("Download account data")
-			workoutcount_data = None
-			if os.path.exists(user_folder+"/workout_count.json"):	
-				with open(user_folder+"/workout_count.json", 'r') as file:
-					workoutcount_data = json.load(file)
-				localWorkoutCount = len(os.listdir(self.workouts_folder))
-				self.workoutcountLabel.setText("Remote:"+str(workoutcount_data["data"]["workout_count"])+"\tLocal:"+str(localWorkoutCount))
-			else:
-				self.workoutcountLabel.setText("Download workout count")
-			# here we are going to get the preferred units of the user
+			
+			# Unit preferences
 			if os.path.exists(user_folder+"/user_preferences.json"):
 				with open(user_folder+"/user_preferences.json", 'r') as file:	
 					preference_data = json.load(file)
@@ -434,6 +418,158 @@ class Profile(QWidget):
 				self.body_measurement_unit = preference_data["data"]["body_measurement_unit"]
 			else:
 				self.weight_unit = "kg"
+			
+			# Get Following Data
+			following_data = {}
+			if os.path.exists(user_folder+"/following.json"):	
+				with open(user_folder+"/following.json", 'r') as file:
+					following_data = json.load(file)
+			# Get Follower Data
+			follower_data = {}
+			if os.path.exists(user_folder+"/follower.json"):	
+				with open(user_folder+"/follower.json", 'r') as file:
+					follower_data = json.load(file)
+			# Build Mutual Friend List
+			mutual_friends = []
+			following_only = []
+			follower_only = []
+			for user in following_data["data"]:
+				if user in follower_data["data"]:
+					mutual_friends.append(user)
+				else:
+					following_only.append(user)
+			for user in follower_data["data"]:
+				if user not in mutual_friends:
+					follower_only.append(user)
+			print(len(mutual_friends),"mutual friends,",len(following_only),"you follow, and",len(follower_only),"follow you.")
+			
+			# Suggested Users
+			suggested_data = {}
+			if os.path.exists(user_folder+"/suggested_users.json"):	
+				with open(user_folder+"/suggested_users.json", 'r') as file:
+					suggested_data = json.load(file)
+			suggested = []
+			for user in suggested_data["data"]:
+				suggested.append(user["username"])
+			suggested = sorted(suggested)
+			
+			
+			# Clear the lists
+			self.friendList.clear()
+			self.followList.clear()
+			self.squadList.clear()
+			
+			# Populate the interface lists
+			label = QListWidgetItem("------Mutual Friends------")
+			label.setTextAlignment(Qt.AlignCenter)
+			self.friendList.addItem(label)
+			self.friendList.addItems(mutual_friends)
+				
+			# Populate the follows list (recent changes, and non-mutual)
+			# Changes first
+			label = QListWidgetItem("------Suggested Users------")
+			label.setTextAlignment(Qt.AlignCenter)
+			self.followList.addItem(label)
+			self.followList.addItems(suggested)
+			label = QListWidgetItem("------Newly Following------")
+			label.setTextAlignment(Qt.AlignCenter)
+			self.followList.addItem(label)
+			self.followList.addItems(following_data["added"])
+			label = QListWidgetItem("------Stopped Following------")
+			label.setTextAlignment(Qt.AlignCenter)
+			self.followList.addItem(label)
+			self.followList.addItems(following_data["removed"])
+			label = QListWidgetItem("------New Follower------")
+			label.setTextAlignment(Qt.AlignCenter)
+			self.followList.addItem(label)
+			self.followList.addItems(follower_data["added"])
+			label = QListWidgetItem("------Lost Follower------")
+			label.setTextAlignment(Qt.AlignCenter)
+			self.followList.addItem(label)
+			self.followList.addItems(follower_data["removed"])
+			# Then the non mutual lists
+			label = QListWidgetItem("------You Follow------")
+			label.setTextAlignment(Qt.AlignCenter)
+			self.followList.addItem(label)
+			self.followList.addItems(following_only)
+			label = QListWidgetItem("------Follow You------")
+			label.setTextAlignment(Qt.AlignCenter)
+			self.followList.addItem(label)
+			self.followList.addItems(follower_only)
+			
+			
+			# Do the Squad List
+			squad_data = {}
+			if os.path.exists(user_folder+"/squad.json"):	
+				with open(user_folder+"/squad.json", 'r') as file:
+					squad_data = json.load(file)
+			# Changes First
+			label = QListWidgetItem("------New Member------")
+			label.setTextAlignment(Qt.AlignCenter)
+			self.squadList.addItem(label)
+			#self.squadList.addItems(sorted(squad_data["added"]))
+			new_squad = []
+			for user in sorted(squad_data["added"]):
+				if squad_data["following_data"][user] == "not-following":
+					#new_squad.append(str(squad_data["data"][user]*10)+"% "+user + " (not following)")
+					new_squad.append(user + " (not following)")
+				else:
+					#new_squad.append(str(squad_data["data"][user]*10)+"% "+user)
+					new_squad.append(user)
+			self.squadList.addItems(new_squad)
+			label = QListWidgetItem("------Lost Member------")
+			label.setTextAlignment(Qt.AlignCenter)
+			self.squadList.addItem(label)
+			self.squadList.addItems(sorted(squad_data["removed"]))
+			label = QListWidgetItem("------Your Squad------")
+			label.setTextAlignment(Qt.AlignCenter)
+			self.squadList.addItem(label)
+			squad_list = []
+			last_score = None
+			for user in squad_data["data"].keys():
+				score = squad_data["data"][user]*10
+				if score != last_score:
+					label = QListWidgetItem("------"+str(score)+"%------")
+					label.setTextAlignment(Qt.AlignCenter)
+					self.squadList.addItem(label)
+					last_score = score
+				if squad_data["following_data"][user] == "not-following":
+					#squad_list.append(user + " (not following)")
+					self.squadList.addItem(user + " (not following)")
+				else:
+					#squad_list.append(user)
+					self.squadList.addItem(user)
+			#self.squadList.addItems(squad_list)
+			
+			
+			self.feedloading = False
+			return
+			
+			# account_data = None
+			# if os.path.exists(user_folder+"/account.json"):	
+				# with open(user_folder+"/account.json", 'r') as file:
+					# account_data = json.load(file)
+					# if "full_name" not in account_data["data"]:
+						# account_data["data"]["full_name"] = ""
+					# if "description" not in account_data["data"]:
+						# account_data["data"]["description"] = ""
+				# self.usernameLabel.setText(account_data["data"]["username"])
+				# self.fullnameLabel.setText(account_data["data"]["full_name"])
+				# self.detailLabel.setText(account_data["data"]["description"])
+				# self.followersLabel.setText(str(account_data["data"]["follower_count"]))
+				# self.followingLabel.setText(str(account_data["data"]["following_count"]))
+			# else:
+				# self.usernameLabel.setText("Download account data")
+			# workoutcount_data = None
+			# if os.path.exists(user_folder+"/workout_count.json"):	
+				# with open(user_folder+"/workout_count.json", 'r') as file:
+					# workoutcount_data = json.load(file)
+				# localWorkoutCount = len(os.listdir(self.workouts_folder))
+				# self.workoutcountLabel.setText("Remote:"+str(workoutcount_data["data"]["workout_count"])+"\tLocal:"+str(localWorkoutCount))
+			# else:
+				# self.workoutcountLabel.setText("Download workout count")
+			# here we are going to get the preferred units of the user
+
 			#self.workoutcountLabel.setText(str(workoutcount_data["data"]["workout_count"]))
 			
 			
@@ -456,7 +592,7 @@ class Profile(QWidget):
 			
 			
 			# populate calendar with dates, starting at day 0 of 52 weeks ago TODO is this too much work for this thread?
-			cal_start_date = datetime.datetime.now().astimezone()-datetime.timedelta(weeks=52)
+			cal_start_date = datetime.datetime.now().astimezone()-datetime.timedelta(weeks=11)
 			#print("starting date",cal_start_date)
 			new_cal_start_date = cal_start_date.replace(day=1,hour=0,minute=0,second=0,microsecond=0)
 			#print("new starting_date", new_cal_start_date)
@@ -502,7 +638,7 @@ class Profile(QWidget):
 				this_day = this_date.isoweekday()%7
 				if this_day < prev_day:
 					week +=1
-					if week >=53:
+					if week >=12:
 						break
 				if this_date.month != prev_month:
 					#print("new month",week_month_start,week,this_day)
@@ -565,7 +701,7 @@ class Profile(QWidget):
 				else:
 					self.calendarWidget.item(this_day+1,week).setBackground(self.palette().color(QPalette.AlternateBase))
 				day_count += 1
-			self.calendarWidget.setSpan(0, week_month_start, 1, 53-week_month_start)	
+			self.calendarWidget.setSpan(0, week_month_start, 1, 12-week_month_start)	
 			
 			
 			self.calendarWidget.blockSignals(False)
@@ -764,7 +900,44 @@ class Profile(QWidget):
 			self.do_update()
 	
 			
+	def friendListRowChanged(self, row):
+		if not self.friendList.item(row):
+			return
+		print("friendListRowChanged", row, self.friendList.item(row).text())
+		self.followList.clearSelection()
+		self.squadList.clearSelection()
+		self.current_user = str(self.friendList.item(row).text())
+		self.feed_reload_button()
 		
+	def followListRowChanged(self, row):
+		if not  self.followList.item(row):
+			return
+		print("followListRowChanged", row, self.followList.item(row).text())
+		self.friendList.clearSelection()
+		self.squadList.clearSelection()
+		the_text = str(self.followList.item(row).text())
+		if the_text.startswith("------"):
+			return
+		else:
+			self.current_user = the_text
+			self.feed_reload_button()
+	
+	def squadListRowChanged(self, row):
+		if not self.squadList.item(row):
+			return
+		print("squadListRowChanged", row, self.squadList.item(row).text())
+		self.followList.clearSelection()
+		self.friendList.clearSelection()
+		the_text = str(self.squadList.item(row).text())
+		print(the_text,the_text.startswith("------"),the_text.endswith(" (not following)"))
+		if the_text.startswith("------"):
+			return
+		elif the_text.endswith(" (not following)"):
+			self.current_user = the_text[:-16]
+			self.feed_reload_button()
+		else:
+			self.current_user = the_text
+			self.feed_reload_button()
 	
 	def calendar_selection(self):
 		the_item = self.calendarWidget.selectedItems()[0]
@@ -1049,9 +1222,16 @@ class Profile(QWidget):
 	
 	
 	def feedScrollChanged(self, value): #https://doc.qt.io/qt-5/qabstractslider.html#valueChanged
-		if value >= self.feedList.verticalScrollBar().maximum()-1000 and self.feedloadbutton.isEnabled(): #if we're at the end
+		if value >= self.feedList.verticalScrollBar().maximum()-1000 and not self.feedloading: #if we're at the end
 			self.feed_load_button()
-			
+	
+	def reload_button(self):
+		self.reloadbutton.setEnabled(False)
+		worker = ReloadWorker()
+		self.reloadworkemit = worker.emitter
+		self.reloadworkemit.done.connect(self.on_reload_worker_done)
+		self.pool.start(worker)
+	
 	def feed_reload_button(self):
 		self.feed_last_index = 0
 		self.feedList.clear()
@@ -1059,18 +1239,71 @@ class Profile(QWidget):
 		#self.feed_load_button()
 		#self.feed_load_button()
 		
+		# load the profile
+		nextworker = ProfileWorker(self.current_user)
+		self.nextworkeremit = nextworker.emitter
+		self.nextworkeremit.done.connect(self.on_profile_worker_done)
+		self.pool.start(nextworker)
+		
 	
 	def feed_load_button(self):
-		self.feedreloadbutton.setEnabled(False)
-		self.feedloadbutton.setEnabled(False)
+		#self.feedreloadbutton.setEnabled(False)
+		#self.feedloadbutton.setEnabled(False)
 		start_index = self.feed_last_index + 0
-		worker = MyFeedWorker(start_index)
+		worker = MyFeedWorker(start_index, self.current_user)
 		
 		### The line below was creating a segmentation fault, found this: https://stackoverflow.com/questions/29123171/segmentation-fault-when-connecting-a-signal-and-a-slot
 		#worker.emitter.done.connect(self.on_feed_worker_done)
 		self.workemit = worker.emitter
 		self.workemit.done.connect(self.on_feed_worker_done)
+		self.feedloading = True
 		self.pool.start(worker)
+		
+		
+	
+	@Slot(dict)
+	def on_reload_worker_done(self):
+		self.followList.clearSelection()
+		self.friendList.clearSelection()
+		self.squadList.clearSelection()
+		self.do_update()
+		
+		
+		self.reloadbutton.setEnabled(True)
+		
+	@Slot(dict)
+	def on_profile_worker_done(self, the_data):
+		print("all the work is done")
+		#print(the_data)
+		# try:
+		the_string = ""
+		if "full_name" in the_data.keys():
+			the_string += the_data["full_name"]
+		else:
+			
+			the_string += the_data["username"]
+		if "description" in the_data.keys():
+			the_string += "\n\n" + textwrap.fill(the_data["description"],50)
+		the_string += "\n\nFollows You: " + str(the_data["is_followed_by_requester"])
+		the_string += "\nYou Follow: " + str(the_data["following_status"]=="following")
+		the_string += "\nWorkouts: " + str(the_data["workout_count"])
+		the_string += "\nFollowers: " + str(the_data["follower_count"])
+		the_string += "\nFollows: " + str(the_data["following_count"])
+		#print(the_string)
+		self.piclabel.setToolTip(the_string)
+		# except:
+			# None
+		
+		imageurl = the_data["profile_pic"]
+		file_name = imageurl.split("/")[-1]
+		img_folder = str(Path.home())+ "/.underthebar/temp/"
+		
+		if os.path.exists(img_folder+file_name):
+			pixmap = QPixmap(img_folder+file_name)#.scaled(250,250)
+			pixmap = self.makeProfileImage(pixmap)
+			self.piclabel.setPixmap(pixmap)
+
+	
 	
 	@Slot(dict)
 	def on_feed_worker_done(self, returnjson):
@@ -1078,7 +1311,8 @@ class Profile(QWidget):
 		if returnjson != 304:
 			#self.feedList.addItem(json.dumps(returnjson, indent=4, sort_keys=False))
 			for workout in returnjson["data"]["workouts"]:
-				fancystring = workout["username"] + " - " + workout["name"]
+				#fancystring = workout["username"] + " - " + workout["name"]
+				fancystring = workout["name"]
 				workout_date = datetime.datetime.utcfromtimestamp(workout["start_time"])
 				workout_date = workout_date.replace(tzinfo=datetime.timezone.utc).astimezone(tz=None)
 				import platform
@@ -1199,10 +1433,12 @@ class Profile(QWidget):
 				
 				
 				likebutton.clicked.connect(lambda *args, x=workout["id"], y=likebutton, z=counterLabel: self.like_button(args, x,y,z))
-				self.feed_last_index = workout["index"]
+				#self.feed_last_index = workout["index"]
+				self.feed_last_index +=1 # For other users its a workouts offset rather than the index
 		
-		self.feedreloadbutton.setEnabled(True)
-		self.feedloadbutton.setEnabled(True)
+		#self.feedreloadbutton.setEnabled(True)
+		#self.feedloadbutton.setEnabled(True)
+		self.feedloading = False
 	
 	def like_button(self, checked, workout_id, button, label):
 		#print(checked, workout_id, button.isChecked())
@@ -1291,9 +1527,43 @@ class Profile(QWidget):
 		pm = QPixmap.fromImage(out_img)
 		pm.setDevicePixelRatio(pr)
 		#size *= pr
-		pm = pm.scaled(250, 250, Qt.KeepAspectRatio, 
+		pm = pm.scaled(300, 300, Qt.KeepAspectRatio, 
 				       Qt.SmoothTransformation)
 		return pm
+
+class ReloadEmitter(QObject):
+	# setting up custom signal
+	done = Signal(dict)
+
+class ReloadWorker(QRunnable):
+
+	def __init__(self):
+		super(ReloadWorker, self).__init__()
+
+		self.emitter = ReloadEmitter()
+
+	def run(self):
+		#returnjson = hevy_api.feed_workouts_paged(self.start_from, user=self.feed_user)
+		hevy_api.friends()
+		hevy_api.cheer_squad()
+		hevy_api.update_generic("suggested_users")
+		self.emitter.done.emit(None)
+
+class ProfileEmitter(QObject):
+	# setting up custom signal
+	done = Signal(dict)
+
+class ProfileWorker(QRunnable):
+
+	def __init__(self, the_user):
+		super(ProfileWorker, self).__init__()
+		self.the_user = the_user
+		self.emitter = ProfileEmitter()
+
+	def run(self):
+		#returnjson = hevy_api.feed_workouts_paged(self.start_from, user=self.feed_user)
+		the_data = hevy_api.get_user_profile(self.the_user)
+		self.emitter.done.emit(the_data)
 
 class MyEmitter(QObject):
 	# setting up custom signal
@@ -1301,14 +1571,15 @@ class MyEmitter(QObject):
 
 class MyFeedWorker(QRunnable):
 
-	def __init__(self, start_from):
+	def __init__(self, start_from, feed_user):
 		super(MyFeedWorker, self).__init__()
 
 		self.start_from = start_from + 0
+		self.feed_user = feed_user
 		self.emitter = MyEmitter()
 
 	def run(self):
-		returnjson = hevy_api.feed_workouts_paged(self.start_from)
+		returnjson = hevy_api.feed_workouts_paged(self.start_from, user=self.feed_user)
 		self.emitter.done.emit(returnjson)
 
 class LikeEmitter(QObject):
@@ -1356,7 +1627,7 @@ if __name__ == "__main__":
 	
 	
 
-	window = Profile("red")
+	window = Social("red")
 	window.do_update()
 	#window.setFixedSize(800,600)
 	window.resize(1200,800)

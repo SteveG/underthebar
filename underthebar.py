@@ -27,6 +27,7 @@ from utb_page_profile import Profile
 from utb_page_analysis import Analysis
 from utb_page_setting import Setting
 from utb_page_routines import Routines
+from utb_page_social import Social
 import hevy_api
 
 
@@ -103,6 +104,18 @@ class UnderTheBar(QMainWindow):
 		btn.pressed.connect(self.activate_analysis)
 		button_layout.addWidget(btn)
 		self.stacklayout.addWidget(Analysis("yellow"))
+
+
+		btn = QPushButton()#("📈")
+		#btn.setStyleSheet("font-size: 40px;");
+		btn.setIcon(self.loadIcon(script_folder+"/icons/user-group-solid-full.svg"))
+		btn.setIconSize(QSize(48,48))
+		btn.setCheckable(True)
+		btn.setFlat(True)
+		btn.setAutoExclusive(True);
+		btn.pressed.connect(self.activate_social)
+		button_layout.addWidget(btn)
+		self.stacklayout.addWidget(Social("brown"))
 		
 		button_layout.addStretch()
 		
@@ -148,9 +161,13 @@ class UnderTheBar(QMainWindow):
 		self.stacklayout.widget(2).do_update()
 		self.stacklayout.setCurrentIndex(2)
 
+	def activate_social(self):
+		if not self.stacklayout.widget(3).initialised:
+			self.stacklayout.widget(3).do_update()
+		self.stacklayout.setCurrentIndex(3)
 
 	def activate_settings(self):
-		self.stacklayout.setCurrentIndex(3)
+		self.stacklayout.setCurrentIndex(4)
 		
 		
 

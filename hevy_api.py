@@ -168,6 +168,7 @@ def update_generic(to_update):
 		"workout_count":"https://api.hevyapp.com/workout_count",
 		"set_personal_records":"https://api.hevyapp.com/set_personal_records",
 		"user_subscription":"https://api.hevyapp.com/user_subscription",
+		"suggested_users":"https://api.hevyapp.com/suggested_users",
 		}
 	# Fail if to_update is not in the list
 	if to_update not in lookup.keys():
@@ -465,7 +466,7 @@ def delete_routine(routine_id):
 #	
 # Get the Hevy workout feed starting from workout with given index, returns json data
 #
-def feed_workouts_paged(start_from):
+def feed_workouts_paged(start_from, user=None):
 	print("feed_workouts_paged",start_from)
 	# Make sure user is logged in, have their folder, and auth-token
 	user_data = is_logged_in()
@@ -489,7 +490,10 @@ def feed_workouts_paged(start_from):
 	
 	
 	url = "https://api.hevyapp.com/feed_workouts_paged/"
-	if start_from != 0:
+	if user != None:
+		url = "https://api.hevyapp.com/user_workouts_paged?username="+user+"&limit=5&offset="+str(start_from)
+		print(url)
+	elif start_from != 0:
 		url = url + str(start_from)
 	
 	# Do the request
@@ -522,15 +526,65 @@ def download_img(img_url):
 	try:
 		img_folder = str(Path.home())+ "/.underthebar/temp/"
 		file_name = img_url.split("/")[-1]
-		print("start_img: "+file_name)
+		
 		if not os.path.exists(img_folder+file_name):
+			print("start_img: "+file_name)
 			response = requests.get(img_url, stream=True)
 			with open(img_folder+file_name, 'wb') as out_file:
 				shutil.copyfileobj(response.raw, out_file)
 			del response
-		print("end_img: "+file_name)
+			print("end_img: "+file_name)
 	except Exception as e:
 		print(e)
+
+
+#
+# Downloads a users profile, and their profile pic
+#
+def get_user_profile(the_user):
+	# Make sure user is logged in, have their folder, and auth-token
+	user_data = is_logged_in()
+	if user_data[0] == False:
+		return 403
+	user_folder = user_data[1]
+	auth_token = user_data[2]
+	
+	profile_url = "https://api.hevyapp.com/user_profile/" + the_user
+	#filename = to_update + ".json"
+
+	# Create headers to be used
+	headers = BASIC_HEADERS.copy()
+	headers["auth-token"] = auth_token
+	
+	# Now finally do the request for the update. If new update then put that in the file and return 200, else return 304
+	s = requests.Session()
+	r = s.get(profile_url, headers=headers)
+	if r.status_code == 200:
+		data = r.json()
+		new_data = {"data":data, "Etag":r.headers['Etag']}
+		# with open(user_folder+"/"+filename, 'w') as f:
+			# json.dump(new_data, f)
+			
+		try:
+			if "profile_pic" in data:
+				imageurl = data["profile_pic"]
+				file_name = imageurl.split("/")[-1]
+				img_folder = str(Path.home())+ "/.underthebar/temp/"
+				if not os.path.exists(img_folder+file_name):
+					response = requests.get(imageurl, stream=True)
+					if response.status_code == 200:
+						with open(img_folder+file_name, 'wb') as out_file:
+							shutil.copyfileobj(response.raw, out_file)
+					print("fetched profile pic", file_name)
+		except:	
+			pass
+			
+		return data
+	elif r.status_code == 304:
+		return 304
+
+
+
 
 #	
 # Likes, or unlikes, a workout with the given id	
@@ -570,25 +624,66 @@ def friends():
 	user_folder = user_data[1]
 	auth_token = user_data[2]
 	
+	if os.path.exists(user_folder+"/account.json"):	
+		with open(user_folder+"/account.json", 'r') as file:
+			account_data = json.load(file)
+	else:
+		return 403
+	
 	# Make the headers
 	headers = BASIC_HEADERS.copy()
 	headers["auth-token"] = auth_token
 	
-	
-	url = "https://api.hevyapp.com/following/chronically_steve"	
+	# FOLLOWING DATA
+	url = "https://api.hevyapp.com/following/" + account_data["data"]["username"]	
 	s = requests.Session()	
 	r = s.get(url, headers=headers)	
 	following_data = r.json()
 	following = []
 	for datum in following_data:
 		following.append(datum['username'])
-	
-	url = "https://api.hevyapp.com/followers/chronically_steve"	
+	# Do Delta Assessment
+	following_data = {}
+	new_following_data = {"data":following,"added":[],"removed":[]}
+	if os.path.exists(user_folder+"/following.json"):	
+		with open(user_folder+"/following.json", 'r') as file:
+			following_data = json.load(file)
+	else:
+		following_data = {"data":[],"added":[],"removed":[]}
+	for user in new_following_data["data"]:
+		if user not in following_data["data"]:
+			new_following_data["added"].append(user)
+	for user in following_data["data"]:
+		if user not in new_following_data["data"]:
+			new_following_data["removed"].append(user)
+	# Write the file
+	with open(user_folder+"/"+"following.json", 'w') as f:
+		json.dump(new_following_data, f, indent=4)
+			
+	# FOLLOWER DATA
+	url = "https://api.hevyapp.com/followers/" + account_data["data"]["username"]	
 	r = s.get(url, headers=headers)	
 	followers_data = r.json()
 	follower = []
 	for datum in followers_data:
 		follower.append(datum['username'])
+	# Do Delta Assessment
+	follower_data = {}
+	new_follower_data = {"data":follower,"added":[],"removed":[]}
+	if os.path.exists(user_folder+"/follower.json"):	
+		with open(user_folder+"/follower.json", 'r') as file:
+			follower_data = json.load(file)
+	else:
+		follower_data = {"data":[],"added":[],"removed":[]}
+	for user in new_follower_data["data"]:
+		if user not in follower_data["data"]:
+			new_follower_data["added"].append(user)
+	for user in follower_data["data"]:
+		if user not in new_follower_data["data"]:
+			new_follower_data["removed"].append(user)
+	# Write the file
+	with open(user_folder+"/"+"follower.json", 'w') as f:
+		json.dump(new_follower_data, f, indent=4)
 	
 	mutual_friend = []
 	follow_only = []
@@ -602,12 +697,87 @@ def friends():
 		if follow not in following:
 			not_follow.append(follow)
 			
-	print("Mutual Friends:")
-	print(mutual_friend)
+	#print("Mutual Friends:")
+	#print(mutual_friend)
 	print("\nYou Folllow:")
 	print(follow_only)
-	print("\nFollowing You:")
-	print(not_follow)
+	print("Otherwise you have",len(mutual_friend),"mutual friends, and",len(not_follow),"that just follow you.")
+	#print("\nFollowing You:")
+	#print(not_follow)
+
+#
+# List of users actively liking your last 10 workouts
+#	
+def cheer_squad():
+	# Make sure user is logged in, have their folder, and auth-token
+	user_data = is_logged_in()
+	if user_data[0] == False:
+		return 403
+	user_folder = user_data[1]
+	auth_token = user_data[2]
+	
+	# Make the headers
+	headers = BASIC_HEADERS.copy()
+	headers["auth-token"] = auth_token
+	
+	# Find each workout json file	
+	workouts = []	
+	for userfile in sorted(os.listdir(user_folder+"/workouts"), reverse=True):
+		match_user_file = re.search('workout'+'_(....-..-..)_(.+).json',userfile)
+		if match_user_file:
+			workout_date=match_user_file.group(1)
+			workout_id=match_user_file.group(2)
+			#print("Found workout file for:",workout_date,workout_id,", in file",userfile)
+			with open(user_folder+"/workouts/"+userfile, 'r') as file:
+				raw_data = json.load(file)
+				workouts.append(raw_data["id"])
+			
+			if len(workouts)>=10:
+				break
+		
+	#print(len(workouts),"workout data files to process")
+	
+	# Find the likes for each workout
+	the_squad = []
+	the_squad_score = {}
+	the_squad_following = {}
+	s = requests.Session()
+	for workout_id in workouts:
+		url = "https://api.hevyapp.com/workout_likes/" + workout_id	
+		r = s.get(url, headers=headers)	
+		likes_data = r.json()
+		for like_element in likes_data:
+			username = like_element["username"]
+			the_squad_following[username] = like_element["following_status"]
+			if username not in the_squad:
+				the_squad.append(username)
+				the_squad_score[username] = 1
+			else:
+				the_squad_score[username] += 1
+				
+	print(len(the_squad), "members in your squad.", sum(the_squad_score.values()), "likes over 10 workouts.")
+	sorted_squad = dict(sorted(the_squad_score.items(), key=lambda item: (item[1],item[0]), reverse=True))
+	#for squad_member in sorted_squad.keys():
+	#	print(" - ", squad_member, the_squad_score[squad_member])
+		
+	# Do Delta Assessment and write file
+	squad_data = {}
+	new_squad_data = {"data":sorted_squad,"following_data":the_squad_following, "added":[],"removed":[]}
+	if os.path.exists(user_folder+"/squad.json"):	
+		with open(user_folder+"/squad.json", 'r') as file:
+			squad_data = json.load(file)
+	else:
+		squad_data = {"data":{},"added":[],"removed":[]}
+	for user in new_squad_data["data"].keys():
+		if user not in squad_data["data"].keys():
+			new_squad_data["added"].append(user)
+	for user in squad_data["data"].keys():
+		if user not in new_squad_data["data"].keys():
+			new_squad_data["removed"].append(user)
+	# Write the file
+	with open(user_folder+"/"+"squad.json", 'w') as f:
+		json.dump(new_squad_data, f, indent=4)
+		
 
 if __name__ == "__main__":
 	#login_cli()
@@ -618,4 +788,6 @@ if __name__ == "__main__":
 	#print("updating user_subscription",update_generic("user_subscription"))
 	#print(is_logged_in())
 	friends()
+	cheer_squad()
+	update_generic("suggested_users")
 
