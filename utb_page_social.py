@@ -460,7 +460,7 @@ The changes are from when you last reloaded the data using this button"""
 			self.squadList.clear()
 			
 			# Populate the interface lists
-			label = QListWidgetItem("------Mutual Friends------")
+			label = QListWidgetItem("------Mutual Friends ("+str(len(mutual_friends))+")------")
 			label.setTextAlignment(Qt.AlignCenter)
 			self.friendList.addItem(label)
 			self.friendList.addItems(mutual_friends)
@@ -488,11 +488,11 @@ The changes are from when you last reloaded the data using this button"""
 			self.followList.addItem(label)
 			self.followList.addItems(follower_data["removed"])
 			# Then the non mutual lists
-			label = QListWidgetItem("------You Follow------")
+			label = QListWidgetItem("------You Follow ("+str(len(following_only))+")------")
 			label.setTextAlignment(Qt.AlignCenter)
 			self.followList.addItem(label)
 			self.followList.addItems(following_only)
-			label = QListWidgetItem("------Follow You------")
+			label = QListWidgetItem("------Follow You ("+str(len(follower_only))+")------")
 			label.setTextAlignment(Qt.AlignCenter)
 			self.followList.addItem(label)
 			self.followList.addItems(follower_only)
@@ -521,7 +521,7 @@ The changes are from when you last reloaded the data using this button"""
 			label.setTextAlignment(Qt.AlignCenter)
 			self.squadList.addItem(label)
 			self.squadList.addItems(sorted(squad_data["removed"]))
-			label = QListWidgetItem("------Your Squad------")
+			label = QListWidgetItem("------Your Squad ("+str(len(squad_data["data"].keys()))+")------")
 			label.setTextAlignment(Qt.AlignCenter)
 			self.squadList.addItem(label)
 			squad_list = []
