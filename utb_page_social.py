@@ -35,6 +35,7 @@ from PySide2.QtWidgets import (
     QHeaderView,
     QToolButton,
 	QComboBox,
+	QInputDialog
 )
 from PySide2.QtGui import QPalette, QColor, QWindow
 from PySide2.QtGui import QIcon, QPixmap,QImage, QBrush, QPainter
@@ -164,6 +165,13 @@ The changes are from when you last reloaded the data using this button"""
 
 		self.reloadbutton.setToolTip(thetip)
 		
+		self.searchbutton = QPushButton()# "Reload feed")
+		self.searchbutton.setIcon(self.loadIcon(self.script_folder+"/icons/magnifying-glass-solid-full.svg"))
+		self.searchbutton.setFixedWidth(50)
+		self.searchbutton.setCheckable(True)
+		self.searchbutton.clicked.connect(self.search_button)
+		
+		
 		# self.feedloadbutton = QPushButton()
 		# self.feedloadbutton.setIcon(self.loadIcon(self.script_folder+"/icons/plus-solid.svg"))
 		# self.feedloadbutton.setFixedWidth(50)
@@ -178,6 +186,7 @@ The changes are from when you last reloaded the data using this button"""
 		###
 		feedbuttonlayout.addWidget(feedlabel)
 		feedbuttonlayout.addWidget(self.reloadbutton)
+		feedbuttonlayout.addWidget(self.searchbutton)
 		# feedbuttonlayout.addWidget(self.feedloadbutton)
 		# feedbuttonlayout.addWidget(self.filterCombo)
 		#feedbuttonlayout.addStretch(10)
@@ -241,18 +250,27 @@ The changes are from when you last reloaded the data using this button"""
 		bottomcornerlayout = QHBoxLayout()
 
 		self.piclabel = QLabel("image")
-		if os.path.exists(user_folder+"/profileimage"):
-			pixmap = QPixmap(user_folder+"/profileimage")#.scaled(250,250)
-			pixmap = self.makeProfileImage(pixmap)
-			self.piclabel.setPixmap(pixmap)
-		else:
-			script_folder = os.path.split(os.path.abspath(__file__))[0]
-			pixmap = QPixmap(script_folder+"/icons/user-solid.svg").scaled(300,300)
-			self.piclabel.setPixmap(pixmap)
+#		if os.path.exists(user_folder+"/profileimage"):
+#			pixmap = QPixmap(user_folder+"/profileimage")#.scaled(250,250)
+#			pixmap = self.makeProfileImage(pixmap)
+#			self.piclabel.setPixmap(pixmap)
+#		else:
+		script_folder = os.path.split(os.path.abspath(__file__))[0]
+		pixmap = QPixmap(script_folder+"/icons/user-solid.svg").scaled(300,300)
+		self.piclabel.setPixmap(pixmap)
 		self.piclabel.setFixedSize(300,300)
 
 		bottomrightlayout.addWidget(self.piclabel)
-
+		
+		# Follow User Button
+		self.followButton = QPushButton("Follow")
+		self.followButton.setCheckable(True)
+		self.followButton.setMaximumHeight(20)
+		self.followButton.setEnabled(False)
+		self.followButton.setParent(self.piclabel)
+		self.followButton.setGeometry(230,280,70,20)
+		self.followButton.clicked.connect(self.followButtonClicked)
+		#bottomrightlayout.addWidget(self.followButton)
 		
 		bottomcornerlayout.addStretch()
 
@@ -904,9 +922,12 @@ The changes are from when you last reloaded the data using this button"""
 		if not self.friendList.item(row):
 			return
 		print("friendListRowChanged", row, self.friendList.item(row).text())
+		the_text = str(self.friendList.item(row).text())
 		self.followList.clearSelection()
 		self.squadList.clearSelection()
-		self.current_user = str(self.friendList.item(row).text())
+		if the_text.endswith(" (not following)"):
+			the_text = the_text[:-16]
+		self.current_user = the_text
 		self.feed_reload_button()
 		
 	def followListRowChanged(self, row):
@@ -1259,7 +1280,22 @@ The changes are from when you last reloaded the data using this button"""
 		self.feedloading = True
 		self.pool.start(worker)
 		
-		
+	def followButtonClicked(self):
+		toFollow = self.followButton.isChecked()
+		if toFollow:
+			self.followButton.setText("Unfollow")
+			print("Following ", self.current_user)
+			
+			worker = FollowWorker(self.current_user, True)
+			worker.emitter.done.connect(self.on_follow_worker_done)
+			self.pool.start(worker)	
+		else:
+			self.followButton.setText("Follow")
+			print("Unfollowing ", self.current_user)
+			
+			worker = FollowWorker(self.current_user, False)
+			worker.emitter.done.connect(self.on_follow_worker_done)
+			self.pool.start(worker)	
 	
 	@Slot(dict)
 	def on_reload_worker_done(self):
@@ -1270,6 +1306,20 @@ The changes are from when you last reloaded the data using this button"""
 		
 		
 		self.reloadbutton.setEnabled(True)
+
+	@Slot(dict)
+	def on_search_worker_done(self, the_data):
+		print("all the work is done")
+		#print(the_data)
+		
+		the_users = []
+		for user in the_data:
+			the_string = user["username"]
+			if user["following_status"] == "not-following":
+				the_string += " (not following)"
+			the_users.append(the_string)
+		self.friendList.clear()
+		self.friendList.addItems(the_users)
 		
 	@Slot(dict)
 	def on_profile_worker_done(self, the_data):
@@ -1291,9 +1341,20 @@ The changes are from when you last reloaded the data using this button"""
 		the_string += "\nFollows: " + str(the_data["following_count"])
 		#print(the_string)
 		self.piclabel.setToolTip(the_string)
+		
+		if the_data["following_status"]=="following":
+			self.followButton.setChecked(True)
+			self.followButton.setText("Unfollow")
+			self.followButton.setEnabled(True)
+		else:
+			self.followButton.setChecked(False)
+			self.followButton.setText("Follow")
+			self.followButton.setEnabled(True)
 		# except:
 			# None
 		
+		if "profile_pic" not in the_data.keys():
+			the_data["profile_pic"] = "does not exist"
 		imageurl = the_data["profile_pic"]
 		file_name = imageurl.split("/")[-1]
 		img_folder = str(Path.home())+ "/.underthebar/temp/"
@@ -1301,6 +1362,10 @@ The changes are from when you last reloaded the data using this button"""
 		if os.path.exists(img_folder+file_name):
 			pixmap = QPixmap(img_folder+file_name)#.scaled(250,250)
 			pixmap = self.makeProfileImage(pixmap)
+			self.piclabel.setPixmap(pixmap)
+		else:
+			script_folder = os.path.split(os.path.abspath(__file__))[0]
+			pixmap = QPixmap(script_folder+"/icons/user-solid.svg").scaled(300,300)
 			self.piclabel.setPixmap(pixmap)
 
 	
@@ -1448,9 +1513,33 @@ The changes are from when you last reloaded the data using this button"""
 			self.pool.start(worker)	
 		else:
 			button.setChecked(True) # don't allow unliking
+			
+	def search_button(self):
+		print("search")
+		if self.searchbutton.isChecked():
+			print("doing search")
+			text, ok = QInputDialog.getText(self, "Search", "Enter a user name:")
+			if ok:
+				print("starting search for:", text)
+				worker = SearchWorker(text)
+				worker.emitter.done.connect(self.on_search_worker_done)
+				self.pool.start(worker)
+			else:
+				self.searchbutton.setChecked(False)
+				print("search cancelled")
+		else:
+			print("clear search")
+			self.do_update()
+		
 
 	@Slot(QLabel)
 	def on_like_worker_done(self, the_label):
+		if the_label != None:
+			value = int(the_label.text()) + 1
+			the_label.setText(str(value))
+			
+	@Slot(QLabel)
+	def on_follow_worker_done(self, the_label):
 		if the_label != None:
 			value = int(the_label.text()) + 1
 			the_label.setText(str(value))
@@ -1565,6 +1654,22 @@ class ProfileWorker(QRunnable):
 		the_data = hevy_api.get_user_profile(self.the_user)
 		self.emitter.done.emit(the_data)
 
+class SearchEmitter(QObject):
+	# setting up custom signal
+	done = Signal(dict)
+
+class SearchWorker(QRunnable):
+
+	def __init__(self, the_user):
+		super(SearchWorker, self).__init__()
+		self.the_user = the_user
+		self.emitter = SearchEmitter()
+
+	def run(self):
+		#returnjson = hevy_api.feed_workouts_paged(self.start_from, user=self.feed_user)
+		the_data, status = hevy_api.search_user(self.the_user)
+		self.emitter.done.emit(the_data)
+
 class MyEmitter(QObject):
 	# setting up custom signal
 	done = Signal(dict)
@@ -1599,6 +1704,26 @@ class LikeWorker(QRunnable):
 		returnstatus = hevy_api.like_workout(self.workout_id, True)
 		if returnstatus == 200:
 			self.emitter.done.emit(self.the_label)
+		else:
+			self.emitter.done.emit(None)
+
+class FollowEmitter(QObject):
+	# setting up custom signal
+	done = Signal(QLabel)
+
+class FollowWorker(QRunnable):
+
+	def __init__(self, user_to_follow, to_follow):
+		super(FollowWorker, self).__init__()
+
+		self.follow_user = user_to_follow
+		self.to_follow = to_follow
+		self.emitter = FollowEmitter()
+
+	def run(self):
+		returnstatus = hevy_api.follow_user(self.follow_user, self.to_follow)
+		if returnstatus == 200:
+			self.emitter.done.emit(None)
 		else:
 			self.emitter.done.emit(None)
 

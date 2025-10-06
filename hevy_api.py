@@ -612,6 +612,60 @@ def like_workout(workout_id, like_it):
 	
 	return r.status_code
 	
+#
+# Follow a user or unfollow them
+#
+def follow_user(username, to_follow):
+	if to_follow:
+		print("Following user:", username)
+	else:
+		print("Unfollowing user:", username)
+		
+	# Make sure user is logged in, have their folder, and auth-token
+	user_data = is_logged_in()
+	if user_data[0] == False:
+		return 403
+	user_folder = user_data[1]
+	auth_token = user_data[2]
+	
+	# Make the headers
+	headers = BASIC_HEADERS.copy()
+	headers["auth-token"] = auth_token
+	
+	url = "https://api.hevyapp.com/follow"
+	the_json = {"username":username}
+	if not to_follow:
+		url = "https://api.hevyapp.com/unfollow"
+	
+	s = requests.Session()	
+	r = s.post(url, json=the_json, headers=headers)
+	print("attempted...",r.status_code)
+	
+	return r.status_code
+
+#
+# Search for users
+#
+def search_user(username):
+	print("searching for user: ", username)
+	# Make sure user is logged in, have their folder, and auth-token
+	user_data = is_logged_in()
+	if user_data[0] == False:
+		return 403
+	user_folder = user_data[1]
+	auth_token = user_data[2]
+	
+	# Make the headers
+	headers = BASIC_HEADERS.copy()
+	headers["auth-token"] = auth_token
+	
+	url = "https://api.hevyapp.com/users/" + username
+	
+	s = requests.Session()	
+	r = s.get(url, headers=headers)
+	print("attempted...",r.status_code)
+	
+	return r.json(), r.status_code
 	
 #
 # List of friends, cli only atm
