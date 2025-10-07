@@ -9,8 +9,8 @@ It is just a window with a stacked layout and some buttons to navigate the stack
 import sys, os, json
 from pathlib import Path
 
-from PySide2.QtCore import QSize, Qt
-from PySide2.QtWidgets import (
+from PySide6.QtCore import QSize, Qt
+from PySide6.QtWidgets import (
     QApplication,
     QLabel,
     QMainWindow,
@@ -21,7 +21,11 @@ from PySide2.QtWidgets import (
     QStackedLayout,
     QWidget,
 )
-from PySide2.QtGui import QPalette, QColor, QIcon, QPixmap, QPainter
+from PySide6 import QtWidgets
+from PySide6 import QtCore
+from PySide6 import QtGui
+from PySide6 import QtSvg
+from PySide6.QtGui import QPalette, QColor, QIcon, QPixmap, QPainter
 from utb_page_profile import Profile
 #from utb_page_workout import Workout # This is a work in progress
 from utb_page_analysis import Analysis
@@ -208,10 +212,7 @@ class Color(QWidget):
 		
 		self.setMinimumSize(50,50)
 
-from PySide2 import QtWidgets
-from PySide2 import QtCore
-from PySide2 import QtGui
-from PySide2 import QtSvg
+
 #import os
 # from mainwindow import Ui_MainWindow
 

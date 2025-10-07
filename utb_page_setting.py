@@ -9,8 +9,8 @@ import json
 import os
 from pathlib import Path
 
-from PySide2.QtCore import QSize, Qt
-from PySide2.QtWidgets import (
+from PySide6.QtCore import QSize, Qt
+from PySide6.QtWidgets import (
     QApplication,
     QLabel,
     QPushButton,
@@ -19,9 +19,9 @@ from PySide2.QtWidgets import (
     QGridLayout,
     QWidget,
 )
-from PySide2.QtGui import QPalette, QColor
-from PySide2.QtGui import QIcon, QPixmap, QPainter
-from PySide2.QtCore import Slot, Signal, QObject, QThreadPool, QRunnable
+from PySide6.QtGui import QPalette, QColor
+from PySide6.QtGui import QIcon, QPixmap, QPainter
+from PySide6.QtCore import Slot, Signal, QObject, QThreadPool, QRunnable
 
 import hevy_api	
 import strava_api

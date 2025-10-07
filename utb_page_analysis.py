@@ -21,8 +21,8 @@ import os
 import re
 from pathlib import Path
 
-from PySide2.QtCore import Qt
-from PySide2.QtWidgets import (
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import (
     QApplication,
     QPushButton,
     QHBoxLayout,
@@ -31,8 +31,8 @@ from PySide2.QtWidgets import (
     QListWidget,
     QListWidgetItem,
 )
-from PySide2.QtGui import QPalette, QColor
-from PySide2 import QtSvg
+from PySide6.QtGui import QPalette, QColor
+from PySide6 import QtSvgWidgets
 
 import utb_plot_rep_max
 import utb_plot_rep_max_year
@@ -124,7 +124,7 @@ class Analysis(QWidget):
 		
 		script_folder = os.path.split(os.path.abspath(__file__))[0]
 		self.script_folder = os.path.split(os.path.abspath(__file__))[0]
-		self.svgWidget = QtSvg.QSvgWidget(script_folder+"/icons/chart-line-solid.svg")
+		self.svgWidget = QtSvgWidgets.QSvgWidget(script_folder+"/icons/chart-line-solid.svg")
 		#self.svgWidget.resize(500,500)
 		self.layout().addWidget(self.svgWidget)
 		

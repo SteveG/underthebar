@@ -14,9 +14,9 @@ import calendar
 import re
 import xml.etree.ElementTree as ET
 
-from PySide2.QtCore import Qt, QSize, QRect, QItemSelectionModel
-from PySide2 import QtSvg
-from PySide2.QtWidgets import (
+from PySide6.QtCore import Qt, QSize, QRect, QItemSelectionModel
+from PySide6 import QtSvgWidgets
+from PySide6.QtWidgets import (
     QApplication,
     QLabel,
     QPushButton,
@@ -34,10 +34,10 @@ from PySide2.QtWidgets import (
     QToolButton,
 	QComboBox,
 )
-from PySide2.QtGui import QPalette, QColor, QWindow
-from PySide2.QtGui import QIcon, QPixmap,QImage, QBrush, QPainter
+from PySide6.QtGui import QPalette, QColor, QWindow
+from PySide6.QtGui import QIcon, QPixmap,QImage, QBrush, QPainter
 
-from PySide2.QtCore import Slot, Signal, QObject, QThreadPool, QRunnable
+from PySide6.QtCore import Slot, Signal, QObject, QThreadPool, QRunnable
 
 import hevy_api	
 import textwrap
@@ -176,7 +176,7 @@ class Profile(QWidget):
 		feedbuttonlayout = QHBoxLayout()
 		feedbuttonlayout.setSizeConstraint(QLayout.SetMaximumSize)
 		
-		feedlabel = QtSvg.QSvgWidget(self.script_folder+"/icons/hevy-logo.svg")
+		feedlabel = QtSvgWidgets.QSvgWidget(self.script_folder+"/icons/hevy-logo.svg")
 		feedlabel.setFixedWidth(80)
 		feedlabel.setFixedHeight(19)
 		self.feedreloadbutton = QPushButton()# "Reload feed")
@@ -581,7 +581,7 @@ class Profile(QWidget):
 				utb_plot_body_measures.generate_bodyweight_small()
 		
 				bodypicitem = QListWidgetItem()
-				bodypic = QtSvg.QSvgWidget(user_folder+"/plot_bodyweight_small.svg")
+				bodypic = QtSvgWidgets.QSvgWidget(user_folder+"/plot_bodyweight_small.svg")
 				bodypic.setToolTip("Body weight\n20 most recent")
 				#bodypic.load(svgbecomes)
 				bodypic.setFixedWidth(300)
@@ -832,7 +832,7 @@ class Profile(QWidget):
 			svgbecomes = ET.tostring(root)
 			
 			bodypicitem = QListWidgetItem()
-			bodypic = QtSvg.QSvgWidget()
+			bodypic = QtSvgWidgets.QSvgWidget()
 			bodypic.setToolTip("Light - Targeted Muscle\nDark - Secondary Muscle\nBlack - No Activity")
 			bodypic.load(svgbecomes)
 			bodypic.setFixedWidth(300)
@@ -878,7 +878,7 @@ class Profile(QWidget):
 			svgbecomes = ET.tostring(root)
 			
 			bodypicitem = QListWidgetItem()
-			bodypic = QtSvg.QSvgWidget()
+			bodypic = QtSvgWidgets.QSvgWidget()
 			bodypic.setToolTip("Light - Targeted Muscle\nDark - Secondary Muscle\nBlack - No Activity")
 			bodypic.load(svgbecomes)
 			bodypic.setFixedWidth(300)

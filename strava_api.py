@@ -6,11 +6,12 @@ import socketserver
 from urllib.parse import urlparse, parse_qs
 import sys
 from stravalib import Client
-from datetime import datetime
+from datetime import datetime, timedelta
 import requests, json
 import webbrowser
 import uuid
 import random
+import copy
 
 class Server(socketserver.TCPServer):
 
@@ -114,7 +115,7 @@ def do_the_thing():
 	  # "updateRoutineValues": False,
 	  # "shareToStrava": False
 	# }
-	run_template = {
+	run_template_tocopy = {
 	  "workout": {
 		"workout_id": "3413fa99-ace5-4209-b997-1ca3251f9fbc",
 		"title": "Running (import)",
@@ -263,7 +264,7 @@ def do_the_thing():
 	for activity in activities:
 		#print("{0.type} {0.moving_time} {0.distance} {0.start_date} {0.average_heartrate} {0.max_heartrate} {0.average_watts} {0.max_watts}".format(activity))
 		print(activity.type,activity.name, activity.start_date)
-
+		run_template = copy.deepcopy(run_template_tocopy)
 		#print(str(activity.type) == "root='Run'")
 		#print(type(activity.type))
 		# Here handle the submittable activities, we only want to submit one of those
@@ -282,24 +283,25 @@ def do_the_thing():
 				run_template["workout"]["exercises"][0]["exercise_template_id"] = submittable_activity_type.id
 
 				run_template["workout"]["start_time"] = int(activity.start_date.timestamp())
-				run_template["workout"]["end_time"] = int(activity.start_date.timestamp()+activity.moving_time.total_seconds())
+				run_template["workout"]["end_time"] = int(activity.start_date.timestamp()+activity.moving_time)
 				run_template["strava_activity_local_time"] = activity.start_date.strftime('%Y-%m-%dT%H:%M:%SZ')
-				run_template["workout"]["exercises"][0]["sets"][0]["duration_seconds"] = int(activity.moving_time.total_seconds())
+				run_template["workout"]["exercises"][0]["sets"][0]["duration_seconds"] = int(activity.moving_time)
 				run_template["workout"]["exercises"][0]["sets"][0]["distance_meters"] = int(activity.distance)
-				run_template["workout"]["exercises"][0]["sets"][0]["completed_at"] = (activity.start_date+activity.moving_time).strftime('%Y-%m-%dT%H:%M:%SZ')
+				run_template["workout"]["exercises"][0]["sets"][0]["completed_at"] = (activity.start_date+timedelta(seconds=activity.moving_time)).strftime('%Y-%m-%dT%H:%M:%SZ')
 				print("Completed at",run_template["workout"]["exercises"][0]["sets"][0]["completed_at"])
-				print("\n",json.dumps(run_template,indent=4),"\n")
-
+				
 				if activity.description:
 					run_template["workout"]["description"] = str(activity.description) + "\n\n"+run_template["workout"]["description"]			
 			
+				print("\n",json.dumps(run_template,indent=4),"\n") # print before doing heartrate to avoid excessive printout
+
 				if activity.average_heartrate:
 					run_template["workout"]["exercises"][0]["notes"] = "Heartrate Avg: " + str(activity.average_heartrate) + "bpm, Max: " + str(activity.max_heartrate) + "bpm."
 					
 					
 					# PLAY WITH ADDING HEART RATE TO HEVY
 					print("Try heart rate stream")
-					streams = client.get_activity_streams(activity.id,types=["time","heartrate"], series_type="time", resolution="high")
+					streams = client.get_activity_streams(activity.id,types=["time","heartrate"])#, series_type="time", resolution="high")
 					print("Time data points",len(streams["time"].data))
 					print("Heartrate data points",len(streams["heartrate"].data))
 					samples = []
