@@ -1307,14 +1307,15 @@ The changes are from when you last reloaded the data using this button"""
 		
 		self.reloadbutton.setEnabled(True)
 
-	@Slot(dict)
+	@Slot(list)
 	def on_search_worker_done(self, the_data):
 		print("all the work is done")
-		#print(the_data)
+		print(the_data)
 		
 		the_users = []
 		for user in the_data:
 			the_string = user["username"]
+			print(the_string)
 			if user["following_status"] == "not-following":
 				the_string += " (not following)"
 			the_users.append(the_string)
@@ -1656,7 +1657,7 @@ class ProfileWorker(QRunnable):
 
 class SearchEmitter(QObject):
 	# setting up custom signal
-	done = Signal(dict)
+	done = Signal(list)
 
 class SearchWorker(QRunnable):
 
