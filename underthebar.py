@@ -24,7 +24,7 @@ from PySide6.QtWidgets import (
 from PySide6 import QtWidgets
 from PySide6 import QtCore
 from PySide6 import QtGui
-from PySide6 import QtSvg
+from PySide6 import QtSvgWidgets
 from PySide6.QtGui import QPalette, QColor, QIcon, QPixmap, QPainter
 from utb_page_profile import Profile
 #from utb_page_workout import Workout # This is a work in progress
@@ -227,7 +227,7 @@ class Login(QtWidgets.QDialog):
 		self.setWindowTitle("UNDER THE BAR")
 		self.setWindowIcon(self.loadIcon(self.script_folder+"/icons/dumbbell-solid.svg"))
 
-		self.logo = QtSvg.QSvgWidget(self.script_folder+"/icons/hevy-logo.svg")
+		self.logo = QtSvgWidgets.QSvgWidget(self.script_folder+"/icons/hevy-logo.svg")
 		self.textName = QtWidgets.QLineEdit(self)
 		self.textName.setPlaceholderText("Username")
 		self.textName.setAlignment(QtCore.Qt.AlignCenter)
