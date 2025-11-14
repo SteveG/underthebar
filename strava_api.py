@@ -291,7 +291,9 @@ def do_the_thing():
 				print("Completed at",run_template["workout"]["exercises"][0]["sets"][0]["completed_at"])
 				
 				if activity.description:
-					run_template["workout"]["description"] = str(activity.description) + "\n\n"+run_template["workout"]["description"]			
+					run_template["workout"]["description"] = str(activity.description) + "\n\n"+run_template["workout"]["description"]
+				if activity.device_name:
+					run_template["workout"]["description"] = run_template["workout"]["description"] +"(" + str(activity.device_name) + ")"
 			
 				print("\n",json.dumps(run_template,indent=4),"\n") # print before doing heartrate to avoid excessive printout
 
