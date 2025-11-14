@@ -31,7 +31,7 @@ from PySide6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
 )
-from PySide6.QtGui import QPalette, QColor
+from PySide6.QtGui import QPalette, QColor, QPainter
 from PySide6 import QtSvgWidgets
 
 import utb_plot_rep_max
@@ -49,6 +49,7 @@ import utb_plot_bodypart_reps
 import utb_plot_bodypart_sets
 import utb_plot_weightwilks
 import utb_plot_workouts
+import utb_plot_bodypart_radar
 		
 class Analysis(QWidget):
 
@@ -91,6 +92,7 @@ class Analysis(QWidget):
 		self.graphList.setFixedWidth(200)
 		self.graphList.currentRowChanged.connect(self.graphListRowChanged)
 		self.graphList.addItem("Body Measures")
+		self.graphList.addItem("Body Part Radar")
 		self.graphList.addItem("Body Part Reps")
 		self.graphList.addItem("Body Part Sets")
 		self.graphList.addItem("Chin-up / Pull-up Year")
@@ -127,6 +129,7 @@ class Analysis(QWidget):
 		self.svgWidget = QtSvgWidgets.QSvgWidget(script_folder+"/icons/chart-line-solid.svg")
 		#self.svgWidget.resize(500,500)
 		self.layout().addWidget(self.svgWidget)
+		self.currentWidget = self.svgWidget
 		
 		self.initialised = True
 		self.graphList.clearSelection()
@@ -190,6 +193,30 @@ class Analysis(QWidget):
 			else:
 				self.svgWidget.load(self.script_folder+"/icons/chart-line-solid.svg")
 		
+		
+		
+		
+		# First attempt at a QWidget rather than a picture
+		elif graphSelected == "Body Part Radar":
+			the_new_widget = utb_plot_bodypart_radar.UTBPlotBodyPartRadar()
+			the_new_widget.draw_months_all(24)
+			the_new_widget.setRenderHint(QPainter.Antialiasing)
+			self.layout().removeWidget(self.svgWidget)
+			self.layout().addWidget(the_new_widget)
+			self.currentWidget = the_new_widget
+			#chart_view.draw_months_comparision(24, "Volume")
+			#chart_view.setRenderHint(QPainter.Antialiasing)
+#			utb_plot_bodypart_reps.generate_plot_bodypart_reps(optionSelected, self.svgWidget.width(), self.svgWidget.height())
+#			filename = "plot_bodypartreps_"+re.sub(r'\W+', '', optionSelected)+'.svg'	
+#			if os.path.exists(self.user_folder+"/"+filename):	
+#				self.svgWidget.load(self.user_folder+"/"+filename)
+#				self.optionList.currentItem().setCheckState(Qt.Checked)
+#			else:
+#				self.svgWidget.load(self.script_folder+"/icons/chart-line-solid.svg")
+
+		
+
+
 		
 		elif graphSelected == "Body Part Reps":
 			utb_plot_bodypart_reps.generate_plot_bodypart_reps(optionSelected, self.svgWidget.width(), self.svgWidget.height())
@@ -327,6 +354,15 @@ class Analysis(QWidget):
 		print(self.graphList.item(row).text(),"graph selected")	
 		selected_text = self.graphList.item(row).text()
 		
+		#self.layout().takeAt(1)
+		#self.layout().removeWidget(item.widget())
+		#self.layout().addWidget(self.svgWidget)
+		if self.currentWidget != self.svgWidget:
+			self.layout().replaceWidget(self.currentWidget,self.svgWidget)
+			self.currentWidget.deleteLater()
+			self.currentWidget = self.svgWidget
+		#self.generateButton.setEnabled(True)
+		
 		self.optionList.clear()
 		self.optionList.clearSelection()
 		self.generateButton.setEnabled(False)
@@ -380,6 +416,17 @@ class Analysis(QWidget):
 					newOpt.setCheckState(Qt.Checked)
 				self.optionList.addItem(newOpt)
 		
+		
+		elif selected_text == "Body Part Radar":
+			self.options = utb_plot_bodypart_radar.generate_options_bodypart_radar()
+			for new_item in self.options.keys():
+				newOpt = QListWidgetItem(str(new_item))
+				newOpt.setFlags(newOpt.flags() | Qt.ItemIsUserCheckable)
+				newOpt.setCheckState(Qt.Unchecked)
+				if self.options[new_item]:
+					newOpt.setCheckState(Qt.Checked)
+				self.optionList.addItem(newOpt)
+			self.generateButton.setEnabled(False)
 		
 		elif selected_text == "Body Part Reps":
 			self.options = utb_plot_bodypart_reps.generate_options_bodypart_reps()
@@ -574,6 +621,29 @@ class Analysis(QWidget):
 					self.svgWidget.load(self.user_folder+"/"+filename)
 				else:
 					self.svgWidget.load(self.script_folder+"/icons/chart-line-solid.svg")
+
+
+
+			# First go at a widget
+			elif self.graphList.currentItem().text() == "Body Part Radar":
+				#filename = "plot_bodypartreps_"+re.sub(r'\W+', '', selectedItemText)+'.svg'
+				#print("looking for",filename)	
+				#if os.path.exists(self.user_folder+"/"+filename):	
+				#	self.svgWidget.load(self.user_folder+"/"+filename)
+				#else:
+				#	self.svgWidget.load(self.script_folder+"/icons/chart-line-solid.svg")
+
+				self.generateButton.setEnabled(False)
+				the_new_widget = utb_plot_bodypart_radar.UTBPlotBodyPartRadar(selectedItemText)
+				#the_new_widget.draw_months_all(24)
+				the_new_widget.setRenderHint(QPainter.Antialiasing)
+				self.layout().replaceWidget(self.currentWidget, the_new_widget)
+				#self.layout().addWidget(the_new_widget)
+				if self.currentWidget != self.svgWidget:
+					self.currentWidget.deleteLater()
+				self.currentWidget = the_new_widget
+
+
 			
 			elif self.graphList.currentItem().text() == "Body Part Reps":
 				filename = "plot_bodypartreps_"+re.sub(r'\W+', '', selectedItemText)+'.svg'
