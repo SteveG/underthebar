@@ -20,22 +20,178 @@ import concurrent.futures
 BASIC_HEADERS = {
 	'x-api-key': 'with_great_power',
 	'Content-Type': 'application/json',
-	'accept-encoding':'gzip'
+	'accept-encoding':'gzip',
 }
 
 #
+# Temporary work around method of logging in - requires that a valid access_token and refresh_token are provided
+# Gets refreshed tokens and then downloads account.json, the profile pic, and the workout_count
+# Returns 200 if all successful
+#	
+def temp_login(old_access_token, old_refresh_token):
+	home_folder = str(Path.home())
+	utb_folder = home_folder + "/.underthebar"
+
+	if not os.path.exists(utb_folder):
+		os.makedirs(utb_folder)
+		os.makedirs(utb_folder+"/temp")
+
+	headers = BASIC_HEADERS.copy()
+	
+	s = requests.Session()
+	
+
+	temp_token = "Bearer "+old_access_token
+	s.headers.update({'Authorization': temp_token})
+	
+	#r = s.get("https://api.hevyapp.com/workout_count", headers=headers)
+	#print(r.status_code, r.json())
+	the_json = {'refresh_token': old_refresh_token}
+	r = s.post('https://api.hevyapp.com/auth/refresh_token', json=the_json, headers=headers)
+	print(r.status_code, r.request.headers, r.request.body)
+	print("")
+	print(r.json())
+	if r.status_code == 200:
+		returned_json = r.json()
+		access_token = returned_json["access_token"]
+		print("Access_Token", access_token)
+		access_token_expiry = returned_json["expires_at"]
+		print("Expires_At", access_token_expiry)
+		refresh_token = returned_json["refresh_token"]
+		print("Refresh_Token", refresh_token)
+		
+		s.headers.update({'Authorization': "Bearer "+access_token})
+		
+	
+	
+		r = s.get("https://api.hevyapp.com/account", headers=headers)
+		if r.status_code == 200:
+			data = r.json()
+			
+			account_data = {"data":data, "Etag":r.headers['Etag']}
+			#print(json.dumps(r.json(), indent=4, sort_keys=True))
+			
+			user_id = data["id"]
+			
+			user_folder = utb_folder + "/user_"+user_id
+	
+			if not os.path.exists(user_folder):
+				os.makedirs(user_folder)
+				os.makedirs(user_folder+"/workouts")
+				os.makedirs(user_folder+"/routines")
+			
+			with open(utb_folder+"/session.json", 'w') as f:
+				json.dump({"access_token":access_token, "expires_at":access_token_expiry, "refresh_token":refresh_token, "user-id":user_id},f)
+			
+			with open(user_folder+"/account.json", 'w') as f:
+				json.dump(account_data, f)
+			
+			if "profile_pic" in data:
+				imageurl = data["profile_pic"]
+				response = requests.get(imageurl, stream=True)
+				if response.status_code == 200:
+					with open(user_folder+"/profileimage", 'wb') as out_file:
+						shutil.copyfileobj(response.raw, out_file)
+						
+					r = s.get("https://api.hevyapp.com/workout_count", headers=headers)
+					if r.status_code == 200:
+						data = r.json()
+						
+						workout_count = {"data":data, "Etag":r.headers['Etag']}
+						#print(json.dumps(r.json(), indent=4, sort_keys=True))
+						
+						with open(user_folder+"/workout_count.json", 'w') as f:
+							json.dump(workout_count, f)
+							
+						return 200
+					return r.status_code
+			return 200
+		else:
+			print("Obtaining account details failed...")
+			return r.status_code
+			
+	else:
+		print("Obtaining tokens failed...")
+		return r.status_code
+
+#
+# Temporary work around method of logging in - this will check firefox cookies and take the firefox hevy session
+# Returns True if all successful
+#	
+import browsercookie
+import urllib.parse
+def cookie_login():
+	cj = browsercookie.firefox()
+	for cookie in cj:
+		if cookie.domain == "hevy.com" and cookie.name == "auth2.0-token":
+			#print(cookie.value)
+			cookie_json = json.loads(urllib.parse.unquote(cookie.value))
+			login = temp_login(cookie_json["access_token"], cookie_json["refresh_token"])
+			if login == 200:
+				print("successful login via cookie search")
+				return True
+			else:
+				print("failed login via cookie search")
+	return False			
+#
+# Takes the old Hevy access tokens and requests new access tokens
+#
+def update_tokens(old_access_token, old_refresh_token):
+	home_folder = str(Path.home())
+	utb_folder = home_folder + "/.underthebar"
+
+	headers = BASIC_HEADERS.copy()
+	
+	s = requests.Session()
+	
+	temp_token = "Bearer " + old_access_token
+	s.headers.update({'Authorization': temp_token})
+	
+	the_json = {'refresh_token': old_refresh_token}
+	r = s.post('https://api.hevyapp.com/auth/refresh_token', json=the_json, headers=headers)
+	#print(r.status_code, r.request.headers, r.request.body)
+	#print("")
+	#print(r.json())
+	if r.status_code == 200:
+		returned_json = r.json()
+		access_token = returned_json["access_token"]
+		print("Access_Token", access_token)
+		access_token_expiry = returned_json["expires_at"]
+		print("Expires_At", access_token_expiry)
+		refresh_token = returned_json["refresh_token"]
+		print("Refresh_Token", refresh_token)
+		
+		with open(utb_folder+"/session.json", 'r') as file:
+			session_data = json.load(file)
+		session_data["access_token"] = access_token
+		session_data["expires_at"] = access_token_expiry
+		session_data["refresh_token"] = refresh_token
+		with open(utb_folder+"/session.json", 'w') as f:
+			json.dump(session_data,f)
+
+		return access_token # return the new access token so it can get used directly
+	
+	else:
+		print("Failed to update tokens")
+		return False
+		
+		
+#
 # Simple method to provide a login prompt on command line, which is then just passed to login below
+# Currently broken due to Hevy API changes
 #
 def login_cli():
 	user = input("Please input a username: ")
 	password = getpass.getpass()
+
 	
-	login(user,password)
+	return login(user,password)
 
 #
 # Login method taking a username and password
 # Logs in and then downloads account.json, the profile pic, and the workout_count
 # Returns 200 if all successful
+# Currently broken due to Hevy API changes
 #	
 def login(user, password):
 	home_folder = str(Path.home())
@@ -50,9 +206,16 @@ def login(user, password):
 	# Post username and password to Hevy
 	s = requests.Session()
 	
+	print(headers)
+	#return 101
 	r = s.post('https://api.hevyapp.com/login', data=json.dumps({'emailOrUsername':user,'password':password}), headers=headers)
+	print(r.status_code, r.request.headers, r.request.body)
+	
 	if r.status_code == 200:
 		json_content = r.json()
+		print(json.dumps(indent=2))
+		return r.status_code
+		
 		s.headers.update({'auth-token': json_content['auth_token']})
 		
 		auth_token = json_content['auth_token']
@@ -106,6 +269,7 @@ def login(user, password):
 
 #
 # Simple method to log out. We'll delete the user id and auth-token from the sessions file
+# Updated for access/refresh tokens update from Hevy API
 #
 def logout():
 	# The folder to access/store data files
@@ -117,7 +281,10 @@ def logout():
 			session_data = json.load(file)
 	else:
 		return True
-	del session_data["auth-token"]
+	#del session_data["auth-token"]
+	del session_data["access_token"]
+	del session_data["expires_at"]
+	del session_data["refresh_token"]
 	del session_data["user-id"]
 	with open(utb_folder+"/session.json", 'w') as f:
 		json.dump({},f)
@@ -125,9 +292,12 @@ def logout():
 
 #
 # Simple check to see if we have a current token saved indicating we are logged in
-# If logged in return (True, User_Folder, Auth_Token) else (False, None, None)
+# If logged in return (True, User_Folder, Access_Token) else (False, None, None)
+#
+# Updated for access/refresh tokens update from Hevy API
 #
 def is_logged_in():
+	print("checking if logged into Hevy")
 	# The folder to access/store data files
 	home_folder = str(Path.home())
 	utb_folder = home_folder + "/.underthebar"
@@ -140,10 +310,22 @@ def is_logged_in():
 		return False, None, None
 	
 	try:
-		auth_token = session_data["auth-token"]
+		#auth_token = session_data["auth-token"]
+		print("accessing session tokens")
+		access_token = session_data["access_token"]
+		access_token_expiry = session_data["expires_at"]
+		refresh_token = session_data["refresh_token"]
+		print("Comparing token expiry with current time", access_token_expiry, datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3]+"Z")
+		if access_token_expiry < datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3]+"Z":
+			print("Tokens expired, refreshing")
+			access_token = update_tokens(access_token, refresh_token)
+			if not access_token:
+				return False, None, None
+		else:
+			print("Tokens good, logged in")
 		# this is the folder we'll save the data file to
 		user_folder = utb_folder + "/user_" + session_data["user-id"]	
-		return True, user_folder, auth_token
+		return True, user_folder, access_token
 	except:
 		return False, None, None
 
@@ -179,7 +361,8 @@ def update_generic(to_update):
 
 	# Create headers to be used
 	headers = BASIC_HEADERS.copy()
-	headers["auth-token"] = auth_token
+	#headers["auth-token"] = auth_token # update for hevy api change
+	headers["Authorization"] = "Bearer "+auth_token
 	
 	# Check if the file already exists, if it does we'll send the server the Etag so we only get an update
 	update_data = None
@@ -234,7 +417,8 @@ def batch_download():
 	
 	# Create the headers to be used
 	headers = BASIC_HEADERS.copy()
-	headers["auth-token"] = auth_token	
+	#headers["auth-token"] = auth_token # update for hevy api change
+	headers["Authorization"] = "Bearer "+auth_token	
 	
 	# We need to find the highest Hevy workout index in the existing data
 	# Last created file won't work if user creates a workout in the past, so go through every file
@@ -297,7 +481,8 @@ def workouts_sync_batch():
 	
 	# Create required headers
 	headers = BASIC_HEADERS.copy()
-	headers["auth-token"] = auth_token
+	#headers["auth-token"] = auth_token # update for hevy api change
+	headers["Authorization"] = "Bearer "+auth_token	
 	
 	# Go through all workouts and compile the workout ID and when it was updated
 	existing_data = {}
@@ -364,7 +549,8 @@ def routines_sync_batch():
 	
 	# Create required headers
 	headers = BASIC_HEADERS.copy()
-	headers["auth-token"] = auth_token
+	#headers["auth-token"] = auth_token # update for hevy api change
+	headers["Authorization"] = "Bearer "+auth_token	
 	
 	# Go through all workouts and compile the workout ID and when it was updated
 	existing_data = {}
@@ -433,7 +619,8 @@ def put_routine(the_json, routine_id=None):
 	
 	# Create required headers
 	headers = BASIC_HEADERS.copy()
-	headers["auth-token"] = auth_token
+	#headers["auth-token"] = auth_token # update for hevy api change
+	headers["Authorization"] = "Bearer "+auth_token	
 
 	#return 200
 	s = requests.Session()
@@ -458,7 +645,8 @@ def delete_routine(routine_id):
 	
 	# Create required headers
 	headers = BASIC_HEADERS.copy()
-	headers["auth-token"] = auth_token
+	#headers["auth-token"] = auth_token # update for hevy api change
+	headers["Authorization"] = "Bearer "+auth_token	
 	s = requests.Session()	
 	r = s.delete('https://api.hevyapp.com/routine/'+routine_id, headers=headers)
 	return r.status_code, False
@@ -486,7 +674,8 @@ def feed_workouts_paged(start_from, user=None):
 			
 	# Make the headers
 	headers = BASIC_HEADERS.copy()
-	headers["auth-token"] = auth_token
+	#headers["auth-token"] = auth_token # update for hevy api change
+	headers["Authorization"] = "Bearer "+auth_token	
 	
 	
 	url = "https://api.hevyapp.com/feed_workouts_paged/"
@@ -554,7 +743,8 @@ def get_user_profile(the_user):
 
 	# Create headers to be used
 	headers = BASIC_HEADERS.copy()
-	headers["auth-token"] = auth_token
+	#headers["auth-token"] = auth_token # update for hevy api change
+	headers["Authorization"] = "Bearer "+auth_token	
 	
 	# Now finally do the request for the update. If new update then put that in the file and return 200, else return 304
 	s = requests.Session()
@@ -600,7 +790,8 @@ def like_workout(workout_id, like_it):
 	
 	# Make the headers
 	headers = BASIC_HEADERS.copy()
-	headers["auth-token"] = auth_token
+	#headers["auth-token"] = auth_token # update for hevy api change
+	headers["Authorization"] = "Bearer "+auth_token	
 	
 	
 	url = "https://api.hevyapp.com/workout/like/"+workout_id
@@ -630,7 +821,8 @@ def follow_user(username, to_follow):
 	
 	# Make the headers
 	headers = BASIC_HEADERS.copy()
-	headers["auth-token"] = auth_token
+	#headers["auth-token"] = auth_token # update for hevy api change
+	headers["Authorization"] = "Bearer "+auth_token	
 	
 	url = "https://api.hevyapp.com/follow"
 	the_json = {"username":username}
@@ -657,7 +849,8 @@ def search_user(username):
 	
 	# Make the headers
 	headers = BASIC_HEADERS.copy()
-	headers["auth-token"] = auth_token
+	#headers["auth-token"] = auth_token # update for hevy api change
+	headers["Authorization"] = "Bearer "+auth_token	
 	
 	url = "https://api.hevyapp.com/users/" + username
 	
@@ -686,7 +879,8 @@ def friends():
 	
 	# Make the headers
 	headers = BASIC_HEADERS.copy()
-	headers["auth-token"] = auth_token
+	#headers["auth-token"] = auth_token # update for hevy api change
+	headers["Authorization"] = "Bearer "+auth_token	
 	
 	# FOLLOWING DATA
 	url = "https://api.hevyapp.com/following/" + account_data["data"]["username"]	
@@ -772,7 +966,8 @@ def cheer_squad():
 	
 	# Make the headers
 	headers = BASIC_HEADERS.copy()
-	headers["auth-token"] = auth_token
+	#headers["auth-token"] = auth_token # update for hevy api change
+	headers["Authorization"] = "Bearer "+auth_token	
 	
 	# Find each workout json file	
 	workouts = []	
@@ -834,14 +1029,17 @@ def cheer_squad():
 		
 
 if __name__ == "__main__":
-	#login_cli()
+	#print(login_cli())
+	#temp_login()
+	#is_logged_in()
+	cookie_login()
 	#print("updating account",update_generic("account"))
 	#print("updating user_preferences",update_generic("user_preferences"))
 	#print("updating workout_count",update_generic("workout_count"))
 	#print("updating set_personal_records",update_generic("set_personal_records"))
 	#print("updating user_subscription",update_generic("user_subscription"))
 	#print(is_logged_in())
-	friends()
-	cheer_squad()
-	update_generic("suggested_users")
+	#friends()
+	#cheer_squad()
+	#update_generic("suggested_users")
 

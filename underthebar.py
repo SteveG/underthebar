@@ -237,26 +237,48 @@ class Login(QtWidgets.QDialog):
 		self.textPass.setAlignment(QtCore.Qt.AlignCenter)
 		self.buttonLogin = QtWidgets.QPushButton('Login', self)
 		self.buttonLogin.clicked.connect(self.handleLogin)
+		self.buttonAutoLogin = QtWidgets.QPushButton('Auto Firefox Cookie Login', self)
+		self.buttonAutoLogin.clicked.connect(self.handleAutoLogin)
+		
 		layout = QtWidgets.QVBoxLayout(self)
 		layout.addWidget(QtWidgets.QLabel('''<p align=center><u><font size="60">═|██══</font><font size="20">UNDER THE BAR</font><font size="60">══██|═</font></u><br><font size="2">powered by Hevy</font></p>'''))
 		layout.addWidget(QtWidgets.QLabel('''<p align=center>To use Under The Bar you first need to log in to Hevy.</p> <p align=center>Enter your username and password below.</p><p> </p><p> </p>'''))
 		layout.addWidget(self.logo)
+		layout.addWidget(QtWidgets.QLabel('''<p align=center>Temporary work-around. Obtain values from Hevy web app login cookie.</p>'''))
+		layout.addWidget(QtWidgets.QLabel('''<p align=center>Obtain by logging in to web app and using browser dev tools. </p>'''))
+		layout.addWidget(QtWidgets.QLabel('''<p align=center>Can find in Hevy cookie "auth2.0-token"</p> '''))
+		layout.addWidget(QtWidgets.QLabel('''<p align=center>Replace username with value for "access_token", password with value of "refresh_token"</p> <p> </p><p> </p>'''))
 		layout.addWidget(self.textName)
 		layout.addWidget(self.textPass)
 		layout.addWidget(self.buttonLogin)
+		
+		layout.addWidget(QtWidgets.QLabel('''<p> </p><p> </p><p align=center>Or try our auto Firefox cookie find and login. Close Firefox first.</p> '''))
+		layout.addWidget(self.buttonAutoLogin)
 
 	def handleLogin(self):
 		username = self.textName.text()
 		password = self.textPass.text()
 		self.buttonLogin.setIcon(self.loadIcon(self.script_folder+"/icons/spinner-solid.svg"))
 		self.buttonLogin.repaint()
-		logged_in = hevy_api.login(username,password)
+		#logged_in = hevy_api.login(username,password) # Work around necessary for Hevy API authorisation changes
+		logged_in = hevy_api.temp_login(username,password)
 		if logged_in ==200:
 			self.accept()
 		else:
 			QtWidgets.QMessageBox.warning(
 				self, 'Error', 'Bad user or password')
 		self.buttonLogin.setIcon(QIcon())
+		
+	def handleAutoLogin(self):
+		self.buttonAutoLogin.setIcon(self.loadIcon(self.script_folder+"/icons/spinner-solid.svg"))
+		self.buttonAutoLogin.repaint()
+		logged_in = hevy_api.cookie_login()
+		if logged_in:
+			self.accept()
+		else:
+			QtWidgets.QMessageBox.warning(
+				self, 'Error', 'Bad user or password')
+		self.buttonAutoLogin.setIcon(QIcon())
 		
 	def loadIcon(self, path):
 		img = QtGui.QPixmap(path)
@@ -312,7 +334,8 @@ if __name__ == "__main__":
 	else:
 		with open(utb_folder+"/session.json", 'r') as file:
 			session_data = json.load(file)
-			if "auth-token" not in session_data:
+			# if "auth-token" not in session_data: #Hevy API update
+			if "access_token" not in session_data:
 				login = Login()
 				if login.exec_() != QtWidgets.QDialog.Accepted:
 					sys.exit()

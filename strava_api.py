@@ -60,7 +60,7 @@ def do_the_thing():
 	#
 	cl_id = None   # put you strava api client id here
 	cl_secret = None  # put your strava api client secret here
-
+	
 	
 	if cl_id == None or cl_secret == None:
 		print("NEED TO ADD YOUR STRAVA API DETAILS TO strava_api.py !!!\n"*5)
@@ -338,7 +338,8 @@ def do_the_thing():
 			
 			
 			s = requests.Session()
-			s.headers.update({'auth-token': auth_token})
+			#s.headers.update({'auth-token': auth_token}) # update for Hevy API changes
+			s.headers.update({'Authorization': "Bearer "+auth_token})
 			headers = BASIC_HEADERS.copy()
 
 			r = s.get("https://api.hevyapp.com/account", headers=headers)

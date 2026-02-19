@@ -18,9 +18,10 @@ I use "Under the Bar" to nerd-out on my performance and progress.
 Stuff I'm using to make this work for me:
 - Python3
 - matplotlib
-- PySide2
+- PySide6
 - python_dateutil
 - requests
+- browsercookie
 - Font Awesome icons
 
 A username and password is required. If you don't log in to Hevy like this I've been told it can be generated with a password reset.
