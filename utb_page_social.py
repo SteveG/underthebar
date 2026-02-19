@@ -161,6 +161,8 @@ of your last 10 workouts, regardless of following state.
 
 Finally, on the right will display a users feed once you select one.
 
+Bullet pointed users in the first two columns are also in your squad.
+
 The changes are from when you last reloaded the data using this button"""
 
 		self.reloadbutton.setToolTip(thetip)
@@ -447,18 +449,32 @@ The changes are from when you last reloaded the data using this button"""
 			if os.path.exists(user_folder+"/follower.json"):	
 				with open(user_folder+"/follower.json", 'r') as file:
 					follower_data = json.load(file)
+			# Do the Squad List  ▷▶•‣
+			squad_data = {}
+			if os.path.exists(user_folder+"/squad.json"):	
+				with open(user_folder+"/squad.json", 'r') as file:
+					squad_data = json.load(file)
 			# Build Mutual Friend List
 			mutual_friends = []
 			following_only = []
 			follower_only = []
 			for user in following_data["data"]:
 				if user in follower_data["data"]:
-					mutual_friends.append(user)
+					if user in squad_data["data"]:
+						mutual_friends.append("• "+user)
+					else:
+						mutual_friends.append(user)
 				else:
-					following_only.append(user)
+					if user in squad_data["data"]:
+						following_only.append("• "+user)
+					else:
+						following_only.append(user)
 			for user in follower_data["data"]:
-				if user not in mutual_friends:
-					follower_only.append(user)
+				if user not in mutual_friends and ("• "+user) not in mutual_friends:
+					if user in squad_data["data"]:
+						follower_only.append("• "+user)
+					else:
+						follower_only.append(user)
 			print(len(mutual_friends),"mutual friends,",len(following_only),"you follow, and",len(follower_only),"follow you.")
 			
 			# Suggested Users
@@ -468,10 +484,38 @@ The changes are from when you last reloaded the data using this button"""
 					suggested_data = json.load(file)
 			suggested = []
 			for user in suggested_data["data"]:
-				suggested.append(user["username"])
+				if user["username"] in squad_data["data"]:
+					suggested.append("• "+user["username"])
+				else:
+					suggested.append(user["username"])
 			suggested = sorted(suggested)
 			
-			
+			# Changes with squad member checks
+			newly_following = []
+			stopped_following = []
+			new_follower = []
+			lost_follower = []
+			for user in following_data["added"]:
+				if user in squad_data["data"]:
+					newly_following.append("• "+user)
+				else:
+					newly_following.append(user)
+			for user in following_data["removed"]:
+				if user in squad_data["data"]:
+					stopped_following.append("• "+user)
+				else:
+					stopped_following.append(user)
+			for user in follower_data["added"]:
+				if user in squad_data["data"]:
+					new_follower.append("• "+user)
+				else:
+					new_follower.append(user)
+			for user in follower_data["removed"]:
+				if user in squad_data["data"]:
+					lost_follower.append("• "+user)
+				else:
+					lost_follower.append(user)
+					
 			# Clear the lists
 			self.friendList.clear()
 			self.followList.clear()
@@ -492,19 +536,19 @@ The changes are from when you last reloaded the data using this button"""
 			label = QListWidgetItem("------Newly Following------")
 			label.setTextAlignment(Qt.AlignCenter)
 			self.followList.addItem(label)
-			self.followList.addItems(following_data["added"])
+			self.followList.addItems(newly_following)#following_data["added"])
 			label = QListWidgetItem("------Stopped Following------")
 			label.setTextAlignment(Qt.AlignCenter)
 			self.followList.addItem(label)
-			self.followList.addItems(following_data["removed"])
+			self.followList.addItems(stopped_following)#following_data["removed"])
 			label = QListWidgetItem("------New Follower------")
 			label.setTextAlignment(Qt.AlignCenter)
 			self.followList.addItem(label)
-			self.followList.addItems(follower_data["added"])
+			self.followList.addItems(new_follower)#follower_data["added"])
 			label = QListWidgetItem("------Lost Follower------")
 			label.setTextAlignment(Qt.AlignCenter)
 			self.followList.addItem(label)
-			self.followList.addItems(follower_data["removed"])
+			self.followList.addItems(lost_follower)#follower_data["removed"])
 			# Then the non mutual lists
 			label = QListWidgetItem("------You Follow ("+str(len(following_only))+")------")
 			label.setTextAlignment(Qt.AlignCenter)
@@ -516,11 +560,8 @@ The changes are from when you last reloaded the data using this button"""
 			self.followList.addItems(follower_only)
 			
 			
-			# Do the Squad List
-			squad_data = {}
-			if os.path.exists(user_folder+"/squad.json"):	
-				with open(user_folder+"/squad.json", 'r') as file:
-					squad_data = json.load(file)
+			
+			# Populate the Squad List
 			# Changes First
 			label = QListWidgetItem("------New Member------")
 			label.setTextAlignment(Qt.AlignCenter)
@@ -538,7 +579,13 @@ The changes are from when you last reloaded the data using this button"""
 			label = QListWidgetItem("------Lost Member------")
 			label.setTextAlignment(Qt.AlignCenter)
 			self.squadList.addItem(label)
-			self.squadList.addItems(sorted(squad_data["removed"]))
+			lost_squad = []
+			for user in sorted(squad_data["removed"]):
+				if user not in following_data["data"]:
+					lost_squad.append(user + " (not following)")
+				else:
+					lost_squad.append(user)
+			self.squadList.addItems(lost_squad)#sorted(squad_data["removed"]))
 			label = QListWidgetItem("------Your Squad ("+str(len(squad_data["data"].keys()))+")------")
 			label.setTextAlignment(Qt.AlignCenter)
 			self.squadList.addItem(label)
@@ -547,16 +594,23 @@ The changes are from when you last reloaded the data using this button"""
 			for user in squad_data["data"].keys():
 				score = squad_data["data"][user]*10
 				if score != last_score:
+					self.squadList.addItems(sorted(squad_list))
+					squad_list = []
+					
 					label = QListWidgetItem("------"+str(score)+"%------")
 					label.setTextAlignment(Qt.AlignCenter)
 					self.squadList.addItem(label)
+					
 					last_score = score
 				if squad_data["following_data"][user] == "not-following":
-					#squad_list.append(user + " (not following)")
-					self.squadList.addItem(user + " (not following)")
+					squad_list.append(user + " (not following)")
+					#self.squadList.addItem(user + " (not following)")
 				else:
-					#squad_list.append(user)
-					self.squadList.addItem(user)
+					squad_list.append(user)
+					#self.squadList.addItem(user)
+			if len(squad_list) > 0:
+				self.squadList.addItems(sorted(squad_list))
+				squad_list = []
 			#self.squadList.addItems(squad_list)
 			
 			
@@ -925,6 +979,10 @@ The changes are from when you last reloaded the data using this button"""
 		the_text = str(self.friendList.item(row).text())
 		self.followList.clearSelection()
 		self.squadList.clearSelection()
+		if the_text.startswith("------"):
+			return
+		if the_text.startswith("• "):
+			the_text = the_text[2:]
 		if the_text.endswith(" (not following)"):
 			the_text = the_text[:-16]
 		self.current_user = the_text
@@ -937,6 +995,8 @@ The changes are from when you last reloaded the data using this button"""
 		self.friendList.clearSelection()
 		self.squadList.clearSelection()
 		the_text = str(self.followList.item(row).text())
+		if the_text.startswith("• "):
+			the_text = the_text[2:]
 		if the_text.startswith("------"):
 			return
 		else:
@@ -1315,7 +1375,7 @@ The changes are from when you last reloaded the data using this button"""
 		the_users = []
 		for user in the_data:
 			the_string = user["username"]
-			print(the_string)
+			#print(the_string)
 			if user["following_status"] == "not-following":
 				the_string += " (not following)"
 			the_users.append(the_string)
