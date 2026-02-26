@@ -324,10 +324,92 @@ def is_logged_in():
 		else:
 			print("Tokens good, logged in")
 		# this is the folder we'll save the data file to
+		if "user-id" not in session_data:
+			print("Fetching account basics")
+			details = fetch_account(access_token)
+			if details[0]:
+				session_data["user-id"] = details[1]
 		user_folder = utb_folder + "/user_" + session_data["user-id"]	
 		return True, user_folder, access_token
 	except:
 		return False, None, None
+
+# this pulls account info and profile pic for when first logging in
+def fetch_account(access_token):
+	home_folder = str(Path.home())
+	utb_folder = home_folder + "/.underthebar"
+
+	if not os.path.exists(utb_folder):
+		os.makedirs(utb_folder)
+		os.makedirs(utb_folder+"/temp")
+
+	headers = BASIC_HEADERS.copy()
+	
+	s = requests.Session()
+		
+	s.headers.update({'Authorization': "Bearer "+access_token})
+	
+	r = s.get("https://api.hevyapp.com/account", headers=headers)
+	if r.status_code == 200:
+		data = r.json()
+		
+		account_data = {"data":data, "Etag":r.headers['Etag']}
+		#print(json.dumps(r.json(), indent=4, sort_keys=True))
+		
+		user_id = data["id"]
+		
+		user_folder = utb_folder + "/user_"+user_id
+
+		if not os.path.exists(user_folder):
+			os.makedirs(user_folder)
+			os.makedirs(user_folder+"/workouts")
+			os.makedirs(user_folder+"/routines")
+		
+		#with open(utb_folder+"/session.json", 'w') as f:
+		#	json.dump({"access_token":access_token, "expires_at":access_token_expiry, "refresh_token":refresh_token, "user-id":user_id},f)
+		#
+		# New logged in so update the session file with the user id, retaining other elements
+		session_data = {}
+		if os.path.exists(utb_folder+"/session.json"):
+			with open(utb_folder+"/session.json", 'r') as file:
+				session_data = json.load(file)
+		else:
+			return False, False
+		# potentially not the same user logged in so remove user-id from session
+		if "user-id" in session_data:
+			del session_data["user-id"]
+		session_data["user-id"] = user_id
+		with open(utb_folder+"/session.json", 'w') as f:
+			json.dump(session_data,f)
+		
+		with open(user_folder+"/account.json", 'w') as f:
+			json.dump(account_data, f)
+		
+		if "profile_pic" in data:
+			imageurl = data["profile_pic"]
+			response = requests.get(imageurl, stream=True)
+			if response.status_code == 200:
+				with open(user_folder+"/profileimage", 'wb') as out_file:
+					shutil.copyfileobj(response.raw, out_file)
+					
+				r = s.get("https://api.hevyapp.com/workout_count", headers=headers)
+				if r.status_code == 200:
+					data = r.json()
+					
+					workout_count = {"data":data, "Etag":r.headers['Etag']}
+					#print(json.dumps(r.json(), indent=4, sort_keys=True))
+					
+					with open(user_folder+"/workout_count.json", 'w') as f:
+						json.dump(workout_count, f)
+					
+					print("Found user data, logged in successfully")
+					return True,user_id
+				return r.status_code
+		return 200
+	else:
+		print("Obtaining account details failed...")
+		return r.status_code
+
 
 #
 # Updates a local JSON file and returns a http status code indicating success.

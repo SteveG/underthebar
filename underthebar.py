@@ -35,6 +35,8 @@ from utb_page_social import Social
 import hevy_api
 
 
+
+
 class UnderTheBar(QMainWindow):
 	def __init__(self, sillytheme):
 		super(UnderTheBar, self).__init__()
@@ -229,10 +231,10 @@ class Login(QtWidgets.QDialog):
 
 		self.logo = QtSvgWidgets.QSvgWidget(self.script_folder+"/icons/hevy-logo.svg")
 		self.textName = QtWidgets.QLineEdit(self)
-		self.textName.setPlaceholderText("Username")
+		self.textName.setPlaceholderText("Access Token")
 		self.textName.setAlignment(QtCore.Qt.AlignCenter)
 		self.textPass = QtWidgets.QLineEdit(self)
-		self.textPass.setPlaceholderText("Password")
+		self.textPass.setPlaceholderText("Refresh Token")
 		self.textPass.setEchoMode(QtWidgets.QLineEdit.Password)
 		self.textPass.setAlignment(QtCore.Qt.AlignCenter)
 		self.buttonLogin = QtWidgets.QPushButton('Login', self)
@@ -242,12 +244,12 @@ class Login(QtWidgets.QDialog):
 		
 		layout = QtWidgets.QVBoxLayout(self)
 		layout.addWidget(QtWidgets.QLabel('''<p align=center><u><font size="60">═|██══</font><font size="20">UNDER THE BAR</font><font size="60">══██|═</font></u><br><font size="2">powered by Hevy</font></p>'''))
-		layout.addWidget(QtWidgets.QLabel('''<p align=center>To use Under The Bar you first need to log in to Hevy.</p> <p align=center>Enter your username and password below.</p><p> </p><p> </p>'''))
+		layout.addWidget(QtWidgets.QLabel('''<p align=center>To use Under The Bar you first need to log in to Hevy. But the web login didn't work ????</p> <p align=center>Enter your credentials below.</p><p> </p><p> </p>'''))
 		layout.addWidget(self.logo)
-		layout.addWidget(QtWidgets.QLabel('''<p align=center>Temporary work-around. Obtain values from Hevy web app login cookie.</p>'''))
-		layout.addWidget(QtWidgets.QLabel('''<p align=center>Obtain by logging in to web app and using browser dev tools. </p>'''))
-		layout.addWidget(QtWidgets.QLabel('''<p align=center>Can find in Hevy cookie "auth2.0-token"</p> '''))
-		layout.addWidget(QtWidgets.QLabel('''<p align=center>Replace username with value for "access_token", password with value of "refresh_token"</p> <p> </p><p> </p>'''))
+		layout.addWidget(QtWidgets.QLabel('''<p align=center>Obtain the credential from the Hevy web app login cookie.</p>'''))
+		layout.addWidget(QtWidgets.QLabel('''<p align=center>Can get this by logging in to web app and using browser dev tools. </p>'''))
+		layout.addWidget(QtWidgets.QLabel('''<p align=center>Can find in Hevy cookie "auth2.0-token". Need to enter the values of "access_token" and "refresh_token" below.</p> '''))
+		layout.addWidget(QtWidgets.QLabel('''<p align=center>If you are just offline but have logged in previously, just close this and the app should open but data sync won't work.</p> <p> </p><p> </p>'''))
 		layout.addWidget(self.textName)
 		layout.addWidget(self.textPass)
 		layout.addWidget(self.buttonLogin)
@@ -289,7 +291,125 @@ class Login(QtWidgets.QDialog):
 		qp.end()
 		ic = QtGui.QIcon(img)
 		return ic
+
+# #
+# # New log in method that opens up a web view to the hevy website and retrieves the login cookie when the user logs in
+# # Very nice but makes the windows bundle very large as we're basically including a web browser with QWebEngine
+# #
+# # new stuff for web log in
+# import sys
+# from PySide6.QtWidgets import QApplication, QMainWindow
+# from PySide6.QtWebEngineCore import QWebEngineProfile
+# from PySide6.QtWebEngineWidgets import QWebEngineView
+# from PySide6.QtCore import QUrl
+# import urllib.parse
+# import json
+
+# class HevyLogin(QMainWindow):
+	# def __init__(self):
+		# super().__init__()
+		# self.setWindowTitle("You Need to log in to Hevy")
+		# self.resize(600, 800)
+
+		# # 1. Setup WebView
+		# self.browser = QWebEngineView()
+		# self.setCentralWidget(self.browser)
+
+		# # 2. Get the Cookie Store from the profile
+		# self.profile = QWebEngineProfile.defaultProfile()
+		# self.cookie_store = self.profile.cookieStore()
+
+		# # 3. Connect the signal to our handler function
+		# self.cookie_store.cookieAdded.connect(self.on_cookie_added)
+
+		# # 4. Load a URL (e.g., httpbin.org which sets cookies)
+		# self.browser.setUrl(QUrl("https://hevy.com/login"))
+
+	# def on_cookie_added(self, cookie):
+		# # This function is triggered whenever a new cookie is added
+		# name = cookie.name().data().decode('utf-8')
+		# value = cookie.value().data().decode('utf-8')
+		# domain = cookie.domain()
+		# print(f"New Cookie Added: {name} = {value} (Domain: {domain})")
+
+		# if name == "auth2.0-token":
+			# cookie_json = json.loads(urllib.parse.unquote(value))
+			# print("access_token", cookie_json["access_token"])
+			# print("expires_at", cookie_json["expires_at"])
+			# print("refresh_token", cookie_json["refresh_token"])
+			
+			
+			# # save the session data
+			# home_folder = str(Path.home())
+			# utb_folder = home_folder + "/.underthebar"
+			# session_data = {}
+			# if os.path.exists(utb_folder+"/session.json"):
+				# with open(utb_folder+"/session.json", 'r') as file:
+					# session_data = json.load(file)
+			# # potentially not the same user logged in so remove user-id from session if exists
+			# if "user-id" in session_data:
+				# del session_data["user-id"]
+			# session_data["access_token"] = cookie_json["access_token"]
+			# session_data["expires_at"] = cookie_json["expires_at"]
+			# session_data["refresh_token"] = cookie_json["refresh_token"]
+			# with open(utb_folder+"/session.json", 'w') as f:
+				# json.dump(session_data,f)
+			# self.close()
+
+#
+# The lightweight version of web login, uses pywebview which uses native OS renderer so we don't need to bundle a whole browser ourselves
+#
+import webview
+import urllib.parse
+import json
+
+# Just print what the native renderer is for info
+def on_initialized(renderer):
+    print(f'GUI is initialized with renderer: {renderer}')
+
+def on_loaded(window):
+    print('DOM is ready')
+
+    # unsubscribe event listener, subscribe to web/api responses
+    window.events.loaded -= on_loaded
+    window.events.response_received += on_response
+	
+# Not entirely sure this will work on Mac
+def on_response(window, response):
+    #print('Response recevied:', response.url)
+	if response.url == 'https://api.hevyapp.com/login':
+		print("----login response----") 
 		
+		# Don't seem to be able to get the actual response data(?), check if a cookie got created instead
+		cookies = window.get_cookies()
+		for c in cookies:
+			if("auth2.0-token" in c):
+				try:
+					cookie_json = json.loads(urllib.parse.unquote(c["auth2.0-token"].value))
+					print(cookie_json)
+					window.events.response_received -= on_response
+
+
+					# save the session data
+					home_folder = str(Path.home())
+					utb_folder = home_folder + "/.underthebar"
+					session_data = {}
+					if os.path.exists(utb_folder+"/session.json"):
+						with open(utb_folder+"/session.json", 'r') as file:
+							session_data = json.load(file)
+					# potentially not the same user logged in so remove user-id from session if exists
+					if "user-id" in session_data:
+						del session_data["user-id"]
+					session_data["access_token"] = cookie_json["access_token"]
+					session_data["expires_at"] = cookie_json["expires_at"]
+					session_data["refresh_token"] = cookie_json["refresh_token"]
+					with open(utb_folder+"/session.json", 'w') as f:
+						json.dump(session_data,f)
+					
+					window.destroy()
+					
+				except:
+					print("not valid")	
 		
 if __name__ == "__main__":
 	#windows sillyness
@@ -322,23 +442,50 @@ if __name__ == "__main__":
 		palette.setColor(QPalette.HighlightedText, Qt.black)
 		app.setPalette(palette)
 	
+	
+	# Best new way of logging in
+	if not hevy_api.is_logged_in()[0]:
+		window = webview.create_window(
+			'You need to log in to Hevy', 'https://hevy.com/login', confirm_close=False, frameless=False, width=400, height=800
+		)
+		window.events.initialized += on_initialized
+		window.events.loaded += on_loaded
+		print("Starting webview")
+		webview.start()
+		print("Finished webview")
+	
+	# # new way of logging in, uses QTWebEngine and is way to heavy for distributing
+	# if not hevy_api.is_logged_in()[0]:
+		# window = HevyLogin()
+		# window.show()
+		# print("running Hevy login")
+		# app.exec()
+	# else:
+		# print("already logged in to Hevy")
+		
 	home_folder = str(Path.home())
 	utb_folder = home_folder + "/.underthebar"
 
-	# Check whether user is logged in, if not do the login window
+	# Check whether user is logged in now, if not do the old login window
 	session_data = {}
-	if not os.path.exists(utb_folder+"/session.json"):	
+	#if not os.path.exists(utb_folder+"/session.json"):	
+	if not hevy_api.is_logged_in()[0]:
 		login = Login()
 		if login.exec_() != QtWidgets.QDialog.Accepted:
-			sys.exit()
+			#sys.exit()
+			with open(utb_folder+"/session.json", 'r') as file:
+				session_data = json.load(file)
+				# if "auth-token" not in session_data: #Hevy API update
+			if "access_token" not in session_data: #We'll allow the app to open at least, user might just be offline
+				sys.exit()
 	else:
 		with open(utb_folder+"/session.json", 'r') as file:
 			session_data = json.load(file)
 			# if "auth-token" not in session_data: #Hevy API update
-			if "access_token" not in session_data:
-				login = Login()
-				if login.exec_() != QtWidgets.QDialog.Accepted:
-					sys.exit()
+		if "access_token" not in session_data:
+			login = Login()
+			if login.exec_() != QtWidgets.QDialog.Accepted:
+				sys.exit()
 
 
 	window = UnderTheBar(sillytheme)
