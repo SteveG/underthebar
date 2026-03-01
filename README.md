@@ -22,13 +22,14 @@ Stuff I'm using to make this work for me:
 - python_dateutil
 - requests
 - browsercookie
+- pywebview
 - Font Awesome icons
 
 A username and password is required. If you don't log in to Hevy like this I've been told it can be generated with a password reset.
 
 ## To run it
 Execute the python file "underthebar.py" (Windows users can download latest pre-built [release](https://github.com/SteveG/underthebar/releases) and run that)
-- It should prompt you to log in to Hevy
+- It should prompt you to log in to Hevy (via a webview, or via cookie values)
 - Hopefully it will then display a blank profile page
 - Go to settings page (bottom left gear button) and use "workouts_batch" to download your workouts
 - You should then see the local workout count increment until it matches your remote workout count
@@ -36,6 +37,8 @@ Execute the python file "underthebar.py" (Windows users can download latest pre-
 - Go back to profile page and it should now populate... yes?
 
 Currently the app always starts with the unpopulated profile page, but just click on the profile page button to populate.
+
+If you are already logged in but are offline you can just close each of the log in prompts.
 
 User data gets stored in ~/.underthebar
 
