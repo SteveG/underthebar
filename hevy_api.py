@@ -12,6 +12,7 @@ import re
 import time
 import datetime
 import shutil
+import uuid
 
 from pathlib import Path
 import concurrent.futures 
@@ -1109,6 +1110,91 @@ def cheer_squad():
 	with open(user_folder+"/"+"squad.json", 'w') as f:
 		json.dump(new_squad_data, f, indent=4)
 		
+
+#
+# Post a workout to Hevy
+# can include share_to_strava: True to push to Strava
+#
+def post_workout(workout_json):
+    # Make sure user is logged in
+    user_data = is_logged_in()
+    if user_data[0] == False:
+        return 403
+    auth_token = user_data[2]
+    
+    headers = BASIC_HEADERS.copy()
+    headers["Authorization"] = "Bearer " + auth_token
+    
+    s = requests.Session()
+    r = s.post('https://api.hevyapp.com/v2/workout', data=json.dumps(workout_json), headers=headers)
+    return r.status_code, r.text
+
+def prepare_workout_for_clone(workout_data):
+    """Refines the workout data to be compatible with Hevy API v2 POST."""
+    # Handle both wrapped and unwrapped data
+    if "workout" in workout_data:
+        original_w = workout_data["workout"]
+    else:
+        original_w = workout_data
+
+    # Create a fresh workout structure based on what v2 expects
+    w = {}
+    w["workout_id"] = str(uuid.uuid4())
+    w["title"] = original_w.get("name") or original_w.get("title") or "Cloned Workout"
+    w["description"] = original_w.get("description", "")
+    if w["description"]:
+        w["description"] += "\n\n(Cloned to Strava via Under The Bar)"
+    else:
+        w["description"] = "(Cloned to Strava via Under The Bar)"
+    
+    w["start_time"] = original_w.get("start_time")
+    w["end_time"] = original_w.get("end_time")
+    w["media"] = []
+    w["apple_watch"] = original_w.get("apple_watch", False)
+    w["wearos_watch"] = original_w.get("wearos_watch", False)
+    w["is_private"] = original_w.get("is_private", False)
+    w["is_biometrics_public"] = original_w.get("is_biometrics_public", True)
+
+    # Process exercises
+    w["exercises"] = []
+    for old_ex in original_w.get("exercises", []):
+        new_ex = {
+            "title": old_ex.get("title"),
+            "exercise_template_id": old_ex.get("exercise_template_id"),
+            "notes": old_ex.get("notes", ""),
+            "rest_timer_seconds": old_ex.get("rest_seconds") or old_ex.get("rest_timer_seconds") or 0,
+            "volume_doubling_enabled": old_ex.get("volume_doubling_enabled", False),
+            "sets": []
+        }
+        
+        # Process sets
+        for old_set in old_ex.get("sets", []):
+            new_set = {
+                "index": old_set.get("index", 0),
+                "type": old_set.get("type") or old_set.get("indicator") or "normal",
+                "weight_kg": old_set.get("weight_kg"),
+                "reps": old_set.get("reps"),
+                "rpe": old_set.get("rpe"),
+                "distance_meters": old_set.get("distance_meters"),
+                "duration_seconds": old_set.get("duration_seconds"),
+                "completed_at": old_set.get("completed_at")
+            }
+            new_ex["sets"].append(new_set)
+            
+        w["exercises"].append(new_ex)
+
+    # Wrap in the final payload
+    clone_data = {
+        "workout": w,
+        "share_to_strava": True
+    }
+    
+    # Add Strava activity local time if we have it
+    if w["start_time"]:
+        dt = datetime.datetime.fromtimestamp(w["start_time"], datetime.timezone.utc)
+        clone_data["strava_activity_local_time"] = dt.strftime('%Y-%m-%dT%H:%M:%SZ')
+
+    return clone_data
 
 if __name__ == "__main__":
 	#print(login_cli())
