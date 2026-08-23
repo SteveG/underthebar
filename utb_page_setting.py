@@ -28,7 +28,7 @@ import strava_api
 import utb_prs
 import requests
 
-from __init__ import __version__
+from __version__ import __version__
 
 #
 # This view provides means to adjust settings and/or interact with the Hevy API
