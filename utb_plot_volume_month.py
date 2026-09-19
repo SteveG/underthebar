@@ -212,6 +212,7 @@ def generate_plot_volume_month(the_exercise, width, height):
 		
 		# month totals
 		workout_month = dt.datetime.fromtimestamp(workout_date, dt.timezone.utc)
+		workout_month = workout_month.astimezone()
 		workout_month = workout_month.replace(day=1).date()
 		if workout_month in exercise_to_track_data_month.keys():
 			exercise_to_track_data_month[workout_month] += repcount

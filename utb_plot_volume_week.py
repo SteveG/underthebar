@@ -220,6 +220,7 @@ def generate_plot_volume_week(the_exercise, width, height, timelimit=False):
 		
 		# week totals
 		workout_week = dt.datetime.fromtimestamp(workout_date, dt.timezone.utc)
+		workout_week = workout_week.astimezone()
 		workout_week = (workout_week - dt.timedelta(days=(workout_week.isoweekday()%7))).date()
 		if workout_week in exercise_to_track_data_month.keys():
 			exercise_to_track_data_month[workout_week] += repcount

@@ -149,6 +149,7 @@ def generate_plot_workouts(the_exercise, width, height):
 		if weekly:
 			# week totals
 			workout_week = dt.datetime.fromtimestamp(workout_date, dt.timezone.utc)
+			workout_week = workout_week.astimezone()
 			workout_week = (workout_week - dt.timedelta(days=(workout_week.isoweekday()%7))).date()
 			if workout_week in exercise_to_track_data_month.keys():
 				exercise_to_track_data_month[workout_week] += repcount
@@ -159,6 +160,7 @@ def generate_plot_workouts(the_exercise, width, height):
 		else:	
 			# month totals
 			workout_month = dt.datetime.fromtimestamp(workout_date, dt.timezone.utc)
+			workout_month = workout_month.astimezone()
 			workout_month = workout_month.replace(day=1).date()
 			if workout_month in exercise_to_track_data_month.keys():
 				exercise_to_track_data_month[workout_month] += repcount

@@ -229,8 +229,8 @@ def generate_plot_volume_workout(the_exercise, width, height, timelimit=False):
 
 
 	#Create dates for each series x axis
-	x_repcount = [dt.datetime.fromtimestamp(d, dt.timezone.utc).date() for d in repcount_dates]
-	x_barchart = [dt.datetime.fromtimestamp(d, dt.timezone.utc).date() for d in barchart_dates]
+	x_repcount = [dt.datetime.fromtimestamp(d, dt.timezone.utc).astimezone().date() for d in repcount_dates]
+	x_barchart = [dt.datetime.fromtimestamp(d, dt.timezone.utc).astimezone().date() for d in barchart_dates]
 
 
 	#Create plot
