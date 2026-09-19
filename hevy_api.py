@@ -297,7 +297,7 @@ def logout():
 # Updated for access/refresh tokens update from Hevy API
 #
 def is_logged_in():
-	print("checking if logged into Hevy")
+	#print("checking if logged into Hevy")
 	# The folder to access/store data files
 	home_folder = str(Path.home())
 	utb_folder = home_folder + "/.underthebar"
@@ -311,18 +311,19 @@ def is_logged_in():
 	
 	try:
 		#auth_token = session_data["auth-token"]
-		print("accessing session tokens")
+		#print("accessing session tokens")
 		access_token = session_data["access_token"]
 		access_token_expiry = session_data["expires_at"]
 		refresh_token = session_data["refresh_token"]
-		print("Comparing token expiry with current time", access_token_expiry, datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3]+"Z")
+		#print("Comparing token expiry with current time", access_token_expiry, datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3]+"Z")
 		if access_token_expiry < datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3]+"Z":
 			print("Tokens expired, refreshing")
 			access_token = update_tokens(access_token, refresh_token)
 			if not access_token:
 				return False, None, None
 		else:
-			print("Tokens good, logged in")
+			#print("Tokens good, logged in")
+			pass
 		# this is the folder we'll save the data file to
 		if "user-id" not in session_data:
 			print("Fetching account basics")
@@ -736,8 +737,8 @@ def delete_routine(routine_id):
 #	
 # Get the Hevy workout feed starting from workout with given index, returns json data
 #
-def feed_workouts_paged(start_from, user=None):
-	print("feed_workouts_paged",start_from)
+def feed_workouts_paged(start_from, user=None, justonenoimages=False):
+	#print("feed_workouts_paged",start_from)
 	# Make sure user is logged in, have their folder, and auth-token
 	user_data = is_logged_in()
 	if user_data[0] == False:
@@ -774,7 +775,9 @@ def feed_workouts_paged(start_from, user=None):
 	url = "https://api.hevyapp.com/feed_workouts_paged/"
 	if user != None:
 		url = "https://api.hevyapp.com/user_workouts_paged?username="+user+"&limit=5&offset="+str(start_from)
-		print(url)
+		if justonenoimages:
+			url = "https://api.hevyapp.com/user_workouts_paged?username="+user+"&limit=1&offset="+str(start_from)
+		#print(url)
 	elif start_from != 0:
 		url = url + str(start_from)
 	
@@ -789,6 +792,8 @@ def feed_workouts_paged(start_from, user=None):
 		# this bit is for downloading feed workout images, request in parallel
 		img_urls = []
 		for workout in data["workouts"]:
+			if justonenoimages:
+				break
 			#for img_url in workout["image_urls"]:
 			#	img_urls.append(img_url)
 			for media in workout["media"]:
@@ -878,8 +883,63 @@ def get_user_profile(the_user):
 	elif r.status_code == 304:
 		return 304
 
+#
+# CLI to find 10x "dead" accounts to help trim follow list.
+#
+def find_dead_follows():
+	print("searching for dead accounts you follow")
+	user_data = is_logged_in()
+	if user_data[0] == False:
+		return 403
+	user_folder = user_data[1]
+	auth_token = user_data[2]
+	
+	with open(user_folder+"/"+"following.json", 'r') as f:
+		follows_data = json.load(f)
+		print(len(follows_data["data"]), "users")
+	with open(user_folder+"/"+"squad.json", 'r') as f:
+		squad_data = json.load(f)
+		
+	import random
+	shuffled = follows_data["data"].copy()
+	#random.shuffle(shuffled)
+	print(len(shuffled),"users after shuffle")
+	
+	one_year_ago = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=365)
+	#one_year_ago = now.replace(year = now.year-1)
+	one_year_ago_string = one_year_ago.strftime("%Y-%m-%dT%H:%M:%SZ")
+	print("the cut off: ", one_year_ago_string)
+	
+	dead_follows = []
+	for x in range(len(shuffled)):#2000):
+		
+		user_name = shuffled[x]
+		# If in our squad skip them obviously
+		if user_name in squad_data["data"].keys():
+			print(x, user_name,"in squad")
+			continue
+		try:
+			user_json = feed_workouts_paged(0, shuffled[x], True)
+			user_date = user_json["data"]["workouts"][0]["created_at"]
+		except:
+			print(x, user_name, "error???")
+			continue
+		
+		if user_date < one_year_ago_string:
+			dead_follows.append([user_name,user_date])
+			print(x, user_name, user_date, " <<<<<")
+		else:
+			print(x, user_name, user_date)
+		
+		if len(dead_follows) > 19:
+			break
+		
+		#for key in user_json["data"]["workouts"][0].keys():
+		#	print(key)
 
-
+	for item in dead_follows:
+		print(item)
+	
 
 #	
 # Likes, or unlikes, a workout with the given id	
@@ -1222,7 +1282,7 @@ if __name__ == "__main__":
 	#print(login_cli())
 	#temp_login()
 	#is_logged_in()
-	cookie_login()
+	#cookie_login()
 	#print("updating account",update_generic("account"))
 	#print("updating user_preferences",update_generic("user_preferences"))
 	#print("updating workout_count",update_generic("workout_count"))
@@ -1232,4 +1292,5 @@ if __name__ == "__main__":
 	#friends()
 	#cheer_squad()
 	#update_generic("suggested_users")
+	find_dead_follows()
 
