@@ -902,7 +902,7 @@ def find_dead_follows():
 		
 	import random
 	shuffled = follows_data["data"].copy()
-	#random.shuffle(shuffled)
+	random.shuffle(shuffled)
 	print(len(shuffled),"users after shuffle")
 	
 	one_year_ago = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=365)
@@ -911,7 +911,7 @@ def find_dead_follows():
 	print("the cut off: ", one_year_ago_string)
 	
 	dead_follows = []
-	for x in range(len(shuffled)):#2000):
+	for x in range(min(100,len(shuffled))):#len(shuffled)):#2000):
 		
 		user_name = shuffled[x]
 		# If in our squad skip them obviously
