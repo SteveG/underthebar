@@ -72,6 +72,20 @@ def generate_options_cumulative_distance():
 				exists12 = os.path.exists(filename12)
 				exercises_available[set_group["title"]+" (12 months)"] = exists12
 				
+				#
+				# add another version for monthly totals
+				#
+				filenamemonthly = user_folder+'/plot_cumulativedist_'+re.sub(r'\W+', '', set_group["title"])+'monthly.svg'
+				existsmonthly = os.path.exists(filenamemonthly)
+				exercises_available[set_group["title"]+" (monthly)"] = existsmonthly
+				
+				#
+				# add another version for weekly totals
+				#
+				filenameweekly = user_folder+'/plot_cumulativedist_'+re.sub(r'\W+', '', set_group["title"])+'weekly.svg'
+				existsweekly = os.path.exists(filenameweekly)
+				exercises_available[set_group["title"]+" (weekly)"] = existsweekly
+				
 				#print(set_group["title"],exists,filename)
 
 	
@@ -107,8 +121,30 @@ def generate_plot_cumulative_distance(the_exercise, width, height):
 	if the_exercise.endswith(" (12 months)"):
 		timelimit = True
 		cal_start_date = (dt.datetime.now().astimezone()-relativedelta(years=1)).strftime("%Y-%m-%d")
+		cal_start_date = dt.datetime.now().astimezone()-relativedelta(years=1)
+		cal_start_date = (cal_start_date - dt.timedelta(days=(cal_start_date.isoweekday()%7))).strftime("%Y-%m-%d") # make same starting point as weekly plot
 		the_exercise = the_exercise[:-12]
+		
+	#
+	# This bit is for monthly totals
+	#
+	monthly = False
+	if the_exercise.endswith(" (monthly)"):
+		monthly = True
+		the_exercise = the_exercise[:-10]
 	
+	#
+	# This bit is for weekly totals
+	#
+	weekly = False
+	if the_exercise.endswith(" (weekly)"):
+		weekly = True
+		the_exercise = the_exercise[:-9]
+		timelimit = True
+		#cal_start_date = (dt.datetime.now().astimezone()-relativedelta(years=1)).strftime("%Y-%m-%d")
+		#cal_start_date = (cal_start_date - dt.timedelta(days=(cal_start_date.isoweekday()%7))).strftime("%Y-%m-%d")
+		cal_start_date = dt.datetime.now().astimezone()-relativedelta(years=1)
+		cal_start_date = (cal_start_date - dt.timedelta(days=(cal_start_date.isoweekday()%7))).strftime("%Y-%m-%d")
 
 	# Find each workout json file	
 	user_files = []	
@@ -149,6 +185,7 @@ def generate_plot_cumulative_distance(the_exercise, width, height):
 
 	# Go through each set group of each workout to find total reps for the workout
 	exercise_to_track_data = {}
+	exercise_to_track_data_month = {}
 	exercise_to_track_pace_data = {}
 	for workout_date in exercise_to_track_workouts.keys():
 		repcount = 0
@@ -165,6 +202,29 @@ def generate_plot_cumulative_distance(the_exercise, width, height):
 		#print("workout:",workout_date,repmax1,repmax3,repmax5,repmax10)
 		exercise_to_track_data[workout_date]=repcount
 		exercise_to_track_pace_data[workout_date]=bestpace
+
+		if monthly:
+			# month totals
+			workout_month = dt.datetime.fromtimestamp(workout_date, dt.timezone.utc)
+			workout_month = workout_month.astimezone()
+			workout_month = workout_month.replace(day=1).date()
+			if workout_month in exercise_to_track_data_month.keys():
+				exercise_to_track_data_month[workout_month] += repcount
+				#bodypart_track_data_month[workout_month].update(workout_bodypart_counter)
+			else:
+				exercise_to_track_data_month[workout_month] = repcount
+				#bodypart_track_data_month[workout_month] = workout_bodypart_counter
+				
+		if weekly:
+			# month totals
+			# week totals
+			workout_week = dt.datetime.fromtimestamp(workout_date, dt.timezone.utc)
+			workout_week = workout_week.astimezone()
+			workout_week = (workout_week - dt.timedelta(days=(workout_week.isoweekday()%7))).date()
+			if workout_week in exercise_to_track_data_month.keys():
+				exercise_to_track_data_month[workout_week] += repcount
+			else:
+				exercise_to_track_data_month[workout_week] = repcount
 
 	#sys.exit()
 	# Now re go through each workout in consecutive order to build cumulative chart
@@ -183,6 +243,14 @@ def generate_plot_cumulative_distance(the_exercise, width, height):
 		pace_data.append(exercise_to_track_pace_data[workout_key])
 
 
+	# do it for the months
+	if monthly or weekly:
+		monthchart_dates = []
+		monthchart_data = []
+		for month_key in sorted(exercise_to_track_data_month.keys()):
+			monthchart_dates.append(month_key)
+			monthchart_data.append(exercise_to_track_data_month[month_key])
+
 
 	#Create dates for each series x axis
 	x_repcount = [dt.datetime.fromtimestamp(d, dt.timezone.utc).date() for d in repcount_dates]
@@ -200,8 +268,16 @@ def generate_plot_cumulative_distance(the_exercise, width, height):
 	ax1.step(x_repcount, repcount_data, where='post', label='Km', alpha=0.8)
 	ax1.text(x_repcount[-1], repcount_data[-1], round(repcount_data[-1],2),fontsize=7,alpha=0.5)
 
-	ax2.bar(x_barchart,barchart_data,alpha=0.5,width=2, label='Km')
-	ax2.plot(x_barchart,pace_data,alpha=0.8, label='Min/Km')
+	
+	
+	if monthly:
+		ax2.bar(monthchart_dates,monthchart_data,alpha=0.5,width=25,align='edge', label='Km')
+	elif weekly:
+		ax2.bar(monthchart_dates,monthchart_data,alpha=0.5,width=6,align='edge', label='Km')
+		timelimit = False
+	else:
+		ax2.bar(x_barchart,barchart_data,alpha=0.5,width=2, label='Km')
+		ax2.plot(x_barchart,pace_data,alpha=0.8, label='Min/Km')
 	# custom minor tick
 	#ax2.set_yticks([1.1, 2, 2.5], ["fish","fish","fish"], minor=True)
 	#ax2.tick_params(which='minor', length=5, width=2, direction='in')
@@ -222,6 +298,10 @@ def generate_plot_cumulative_distance(the_exercise, width, height):
 	export_folder = user_folder
 	if timelimit:
 		fig1.savefig(export_folder+'/plot_cumulativedist_'+re.sub(r'\W+', '', the_exercise)+'12months.svg', dpi=100)
+	elif monthly:
+		fig1.savefig(export_folder+'/plot_cumulativedist_'+re.sub(r'\W+', '', the_exercise)+'monthly.svg', dpi=100)
+	elif weekly:
+		fig1.savefig(export_folder+'/plot_cumulativedist_'+re.sub(r'\W+', '', the_exercise)+'weekly.svg', dpi=100)
 	else:
 		fig1.savefig(export_folder+'/plot_cumulativedist_'+re.sub(r'\W+', '', the_exercise)+'.svg', dpi=100)
 
