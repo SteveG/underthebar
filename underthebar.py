@@ -31,6 +31,7 @@ from utb_page_profile import Profile
 from utb_page_analysis import Analysis
 from utb_page_setting import Setting
 from utb_page_routines import Routines
+from utb_page_race import RaceMode
 from utb_page_social import Social
 import hevy_api
 
@@ -111,6 +112,16 @@ class UnderTheBar(QMainWindow):
 		button_layout.addWidget(btn)
 		self.stacklayout.addWidget(Analysis("yellow"))
 
+		btn = QPushButton()#("📈")
+		#btn.setStyleSheet("font-size: 40px;");
+		btn.setIcon(self.loadIcon(script_folder+"/icons/flag-checkered-solid-full.svg"))
+		btn.setIconSize(QSize(48,48))
+		btn.setCheckable(True)
+		btn.setFlat(True)
+		btn.setAutoExclusive(True);
+		btn.pressed.connect(self.activate_racemode)
+		button_layout.addWidget(btn)
+		self.stacklayout.addWidget(RaceMode("orange"))
 
 		btn = QPushButton()#("📈")
 		#btn.setStyleSheet("font-size: 40px;");
@@ -166,14 +177,19 @@ class UnderTheBar(QMainWindow):
 	def activate_analysis(self):
 		self.stacklayout.widget(2).do_update()
 		self.stacklayout.setCurrentIndex(2)
-
-	def activate_social(self):
+		
+	def activate_racemode(self):
 		if not self.stacklayout.widget(3).initialised:
 			self.stacklayout.widget(3).do_update()
 		self.stacklayout.setCurrentIndex(3)
 
-	def activate_settings(self):
+	def activate_social(self):
+		if not self.stacklayout.widget(4).initialised:
+			self.stacklayout.widget(4).do_update()
 		self.stacklayout.setCurrentIndex(4)
+
+	def activate_settings(self):
+		self.stacklayout.setCurrentIndex(5)
 		
 		
 
@@ -383,6 +399,7 @@ def on_response(window, response):
 		# Don't seem to be able to get the actual response data(?), check if a cookie got created instead
 		cookies = window.get_cookies()
 		for c in cookies:
+			print(c)
 			if("auth2.0-token" in c):
 				try:
 					cookie_json = json.loads(urllib.parse.unquote(c["auth2.0-token"].value))
