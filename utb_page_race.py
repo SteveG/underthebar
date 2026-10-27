@@ -247,6 +247,128 @@ class RaceMode(QWidget):
 			return "x" + str(the_set["reps"])
 		else:
 			return "set"
+			
+
+	def build_plot_data(self, workout_name):
+		plot_sets = []
+		plot_exercises = []
+
+		if workout_name in ("", "Load"):
+			return plot_sets, plot_exercises
+
+		with open(self.workouts_folder + "/" + self.workout_text[workout_name], 'r') as loadfile:
+			temp_data = json.load(loadfile)
+
+		workout_date = datetime.datetime.fromtimestamp(temp_data["start_time"], datetime.UTC)
+		workout_date = workout_date.replace(tzinfo=datetime.timezone.utc).astimezone()
+
+		flat_sets = []
+		for ex_idx, exercise in enumerate(temp_data.get("exercises", [])):
+			for set_obj in exercise.get("sets", []):
+				completed_at = datetime.datetime.fromisoformat(set_obj["completed_at"])
+				flat_sets.append({
+					"exercise_index": ex_idx,
+					"exercise_title": exercise["title"],
+					"superset_id": exercise.get("superset_id"),
+					"completed_at": completed_at,
+					"from_start": completed_at - workout_date,
+					"label": self.get_set_text(set_obj),
+				})
+
+		flat_sets.sort(key=lambda s: s["completed_at"])
+
+		superset_exercise_order = {}
+		for ex_idx, exercise in enumerate(temp_data.get("exercises", [])):
+			sid = exercise.get("superset_id")
+			if sid is not None:
+				superset_exercise_order.setdefault(sid, []).append(ex_idx)
+
+		superset_letter = {}
+		for sid, ex_indices in superset_exercise_order.items():
+			letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+			for pos, ex_idx in enumerate(ex_indices):
+				superset_letter[ex_idx] = letters[pos]
+
+		exercise_totals = {}
+		exercise_ends = {}
+		previous_completion = workout_date
+
+		for s in flat_sets:
+			ex_idx = s["exercise_index"]
+			delta = s["completed_at"] - previous_completion
+			previous_completion = s["completed_at"]
+
+			if ex_idx not in exercise_totals:
+				exercise_totals[ex_idx] = datetime.timedelta(0)
+
+			exercise_totals[ex_idx] += delta
+			exercise_ends[ex_idx] = s["from_start"]
+
+			plot_sets.append((
+				s["label"],
+				s["from_start"],
+				delta,
+				0,
+				"normal",
+			))
+
+			sid = temp_data["exercises"][ex_idx].get("superset_id")
+			if sid is not None:
+				letter = superset_letter.get(ex_idx)
+				plot_exercises.append((
+					letter,
+					s["from_start"],
+					delta,
+					0,
+					"superset_set",
+				))
+
+		superset_last_set = {}
+		for s in flat_sets:
+			sid = temp_data["exercises"][s["exercise_index"]].get("superset_id")
+			if sid is not None:
+				current = superset_last_set.get(sid)
+				if current is None or s["completed_at"] > current["completed_at"]:
+					superset_last_set[sid] = s
+
+		for sid, ex_indices in superset_exercise_order.items():
+			last_set = superset_last_set.get(sid)
+			if last_set is None:
+				continue
+
+			summary_lines = []
+			for ex_idx in ex_indices:
+				ex = temp_data["exercises"][ex_idx]
+				total = exercise_totals.get(ex_idx, datetime.timedelta(0))
+				letter = superset_letter.get(ex_idx)
+				summary_lines.append(
+					f"{letter} - {ex['title']} - {str(total).split('.')[0].lstrip('0:')}"
+				)
+
+			plot_exercises.append((
+				"\n".join(summary_lines),
+				last_set["from_start"],
+				datetime.timedelta(0),
+				0,
+				"superset_summary",
+			))
+
+		for ex_idx, total_delta in exercise_totals.items():
+			ex = temp_data["exercises"][ex_idx]
+			if ex.get("superset_id") is not None:
+				continue
+
+			plot_exercises.append((
+				f"{ex['title']} - {str(total_delta).split('.')[0].lstrip('0:')}",
+				exercise_ends[ex_idx],  # <- final completion of the exercise
+				total_delta,
+				0,
+				"exercise",
+			))
+
+		return plot_sets, plot_exercises
+
+
 		
 	def generate_clicked(self):
 		
@@ -259,84 +381,40 @@ class RaceMode(QWidget):
 		plot1exercises = []
 		plot1sets = []
 		if workout1Selected != "" and workout1Selected != "Load":
-			with open(self.workouts_folder+"/"+self.workout_text[workout1Selected], 'r') as loadfile:
-				temp_data = json.load(loadfile)
-				
-				workout_date = datetime.datetime.fromtimestamp(temp_data["start_time"], datetime.UTC)
-				exercise_time = workout_date
-				end_time = datetime.datetime.fromtimestamp(temp_data["end_time"], datetime.UTC) - workout_date
-				set_time = workout_date
-				max_set_time1 = 0
-				max_exercise_time1 = 0
-				
-				starting_rest = 0
-				
-				for exercise in temp_data["exercises"]:
-					planned_rest = exercise["rest_seconds"]
-					exercise_rest = 0
-					from_start = None
-					for set in exercise["sets"]:
-						completed_at = datetime.datetime.fromisoformat(set["completed_at"])
-						the_delta = completed_at - set_time
-						from_start = completed_at - workout_date
-						rest_seconds = min(starting_rest, the_delta.total_seconds())
-						exercise_rest += rest_seconds
-						print("Set", from_start, the_delta, rest_seconds)
-						plot1sets.append((self.get_set_text(set), from_start, the_delta, rest_seconds))
-						
-						starting_rest = planned_rest
-						set_time = completed_at
-						
-						max_set_time1 = max(max_set_time1, the_delta.total_seconds())
-					
-					exercise_delta = set_time - exercise_time
-					print (exercise["title"], from_start, exercise_delta, exercise_rest)
-					plot1exercises.append((exercise["title"]+"\n"+str(exercise_delta).split(".")[0].lstrip("0:"), from_start, exercise_delta, exercise_rest))
-					exercise_time = set_time
-					
-					max_exercise_time1 = max(max_exercise_time1, exercise_delta.total_seconds())
+	
+			plot1sets, plot1exercises = self.build_plot_data(workout1Selected)
+			
+			
+		plot1_end = max(
+			(entry[1] for entry in plot1sets + plot1exercises),
+			default=datetime.timedelta(0)
+		)
+		max_set_time1 = max(
+			(entry[2] for entry in plot1sets),
+			default=datetime.timedelta(0)
+		)
+			
 		
 		plot2exercises = []
 		plot2sets = []
 		if workout2Selected != "" and workout2Selected != "Load":
-			with open(self.workouts_folder+"/"+self.workout_text[workout2Selected], 'r') as loadfile:
-				temp_data = json.load(loadfile)
-				
-				workout_date = datetime.datetime.fromtimestamp(temp_data["start_time"], datetime.UTC)
-				exercise_time = workout_date
-				end_time = datetime.datetime.fromtimestamp(temp_data["end_time"], datetime.UTC) - workout_date
-				set_time = workout_date
-				max_set_time2 = 0
-				max_exercise_time2 = 0
-				
-				starting_rest = 0
-				
-				for exercise in temp_data["exercises"]:
-					planned_rest = exercise["rest_seconds"]
-					exercise_rest = 0
-					from_start = None
-					for set in exercise["sets"]:
-						completed_at = datetime.datetime.fromisoformat(set["completed_at"])
-						the_delta = completed_at - set_time
-						from_start = completed_at - workout_date
-						rest_seconds = min(starting_rest, the_delta.total_seconds())
-						exercise_rest += rest_seconds
-						print("Set", from_start, the_delta, rest_seconds)
-						plot2sets.append((self.get_set_text(set), from_start, the_delta, rest_seconds))
-						
-						starting_rest = planned_rest
-						set_time = completed_at
-						
-						max_set_time2 = max(max_set_time2, the_delta.total_seconds())
-					
-					exercise_delta = set_time - exercise_time
-					print (exercise["title"], from_start, exercise_delta, exercise_rest)
-					plot2exercises.append((exercise["title"]+"\n"+str(exercise_delta).split(".")[0].lstrip("0:"), from_start, exercise_delta, exercise_rest))
-					exercise_time = set_time
-					
-					max_exercise_time2 = max(max_exercise_time2, exercise_delta.total_seconds())
+			
+			plot2sets, plot2exercises = self.build_plot_data(workout2Selected) 
+			
+			
+		plot2_end = max(
+			(entry[1] for entry in plot2sets + plot2exercises),
+			default=datetime.timedelta(0)
+		)
+		max_set_time2= max(
+			(entry[2] for entry in plot2sets),
+			default=datetime.timedelta(0)
+		)
+
+		max_end = max(plot1_end, plot2_end)
 		
 		
+		# The End:
 		
 		# For plotting #1
 		if workout1Selected != "" and workout1Selected != "Load":
@@ -345,7 +423,7 @@ class RaceMode(QWidget):
 			for the_set in plot1sets:
 				plot1times.append(datetime.datetime(2000,1,1)+the_set[1])
 				plot1values.append(0)
-			plot1times.append(datetime.datetime(2000,1,1)+end_time)
+			plot1times.append(datetime.datetime(2000,1,1)+max_end)
 			plot1values.append(0)
 		
 		# For plotting #2
@@ -355,7 +433,7 @@ class RaceMode(QWidget):
 			for the_set in plot1sets:
 				plot2times.append(datetime.datetime(2000,1,1)+the_set[1])
 				plot2values.append(0)
-			plot2times.append(datetime.datetime(2000,1,1)+end_time)
+			plot2times.append(datetime.datetime(2000,1,1)+max_end)
 			plot2values.append(0)		
 			
 		
@@ -372,16 +450,24 @@ class RaceMode(QWidget):
 			#ax.set_ylim(datetime.datetime(2000,1,1), datetime.datetime(2000,1,1)+end_time+end_time)
 			
 			for the_set in plot1sets:
-				ax1.annotate(the_set[0], xy=(0, datetime.datetime(2000,1,1)+the_set[1]), xytext=(the_set[2].total_seconds()/max_set_time1*140, datetime.datetime(2000,1,1)+the_set[1]),
+				ax1.annotate(the_set[0], xy=(0, datetime.datetime(2000,1,1)+the_set[1]), xytext=(the_set[2].total_seconds()/max_set_time1.total_seconds()*140, datetime.datetime(2000,1,1)+the_set[1]),
 						arrowprops=dict(arrowstyle="-", color="white", linewidth=0.8), va="center", fontsize=6)
 						
 			for the_ex in plot1exercises:
 				#ax.annotate(the_ex[0], xy=(0, datetime.datetime(2000,1,1)+the_ex[1]), xytext=(-50-the_ex[2].total_seconds()/max_exercise_time*100, datetime.datetime(2000,1,1)+the_ex[1]),
 				#		arrowprops=dict(arrowstyle="-", color="red", linewidth=0.8), va="center")
-				ax1.annotate(the_ex[0], xy=(0, datetime.datetime(2000,1,1)+the_ex[1]), xytext=(-150, datetime.datetime(2000,1,1)+the_ex[1]),
-						va="top", ha="left", fontsize=8)		
-				ax1.annotate("", xy=(0, datetime.datetime(2000,1,1)+the_ex[1]), xytext=(-150, datetime.datetime(2000,1,1)+the_ex[1]),
-						arrowprops=dict(arrowstyle="-", color="white", linewidth=0.8, relpos=(0, 1), zorder=5, shrinkA=0), va="top", ha="left")	
+				
+				if the_ex[4] == "superset_set":
+					ax1.annotate(the_ex[0], xy=(0, datetime.datetime(2000,1,1)+the_ex[1]), xytext=(-50, datetime.datetime(2000,1,1)+the_ex[1]),
+							va="top", ha="left", fontsize=8)		
+					ax1.annotate("", xy=(0, datetime.datetime(2000,1,1)+the_ex[1]), xytext=(-50, datetime.datetime(2000,1,1)+the_ex[1]),
+							arrowprops=dict(arrowstyle="-", color="white", linewidth=0.8, relpos=(0, 1), zorder=5, shrinkA=0), va="top", ha="left")
+				else:
+				
+					ax1.annotate(the_ex[0], xy=(0, datetime.datetime(2000,1,1)+the_ex[1]), xytext=(-150, datetime.datetime(2000,1,1)+the_ex[1]),
+							va="top", ha="left", fontsize=8)		
+					ax1.annotate("", xy=(0, datetime.datetime(2000,1,1)+the_ex[1]), xytext=(-150, datetime.datetime(2000,1,1)+the_ex[1]),
+							arrowprops=dict(arrowstyle="-", color="white", linewidth=0.8, relpos=(0, 1), zorder=5, shrinkA=0), va="top", ha="left")	
 						
 			
 			ax1.spines[["left"]].set_position(("axes",0.5))
@@ -399,16 +485,22 @@ class RaceMode(QWidget):
 			#ax.set_ylim(datetime.datetime(2000,1,1), datetime.datetime(2000,1,1)+end_time+end_time)
 			
 			for the_set in plot2sets:
-				ax2.annotate(the_set[0], xy=(0, datetime.datetime(2000,1,1)+the_set[1]), xytext=(the_set[2].total_seconds()/max_set_time2*140, datetime.datetime(2000,1,1)+the_set[1]),
+				ax2.annotate(the_set[0], xy=(0, datetime.datetime(2000,1,1)+the_set[1]), xytext=(the_set[2].total_seconds()/max_set_time2.total_seconds()*140, datetime.datetime(2000,1,1)+the_set[1]),
 						arrowprops=dict(arrowstyle="-", color="white", linewidth=0.8), va="center", fontsize=6)
 						
 			for the_ex in plot2exercises:
 				#ax.annotate(the_ex[0], xy=(0, datetime.datetime(2000,1,1)+the_ex[1]), xytext=(-50-the_ex[2].total_seconds()/max_exercise_time*100, datetime.datetime(2000,1,1)+the_ex[1]),
 				#		arrowprops=dict(arrowstyle="-", color="red", linewidth=0.8), va="center")
-				ax2.annotate(the_ex[0], xy=(0, datetime.datetime(2000,1,1)+the_ex[1]), xytext=(-150, datetime.datetime(2000,1,1)+the_ex[1]),
-						va="top", ha="left", fontsize=8)		
-				ax2.annotate("", xy=(0, datetime.datetime(2000,1,1)+the_ex[1]), xytext=(-150, datetime.datetime(2000,1,1)+the_ex[1]),
-						arrowprops=dict(arrowstyle="-", color="white", linewidth=0.8, relpos=(0, 1), zorder=5, shrinkA=0), va="top", ha="left")	
+				if the_ex[4] == "superset_set":
+					ax2.annotate(the_ex[0], xy=(0, datetime.datetime(2000,1,1)+the_ex[1]), xytext=(-50, datetime.datetime(2000,1,1)+the_ex[1]),
+							va="top", ha="left", fontsize=8)		
+					ax2.annotate("", xy=(0, datetime.datetime(2000,1,1)+the_ex[1]), xytext=(-50, datetime.datetime(2000,1,1)+the_ex[1]),
+							arrowprops=dict(arrowstyle="-", color="white", linewidth=0.8, relpos=(0, 1), zorder=5, shrinkA=0), va="top", ha="left")	
+				else:
+					ax2.annotate(the_ex[0], xy=(0, datetime.datetime(2000,1,1)+the_ex[1]), xytext=(-150, datetime.datetime(2000,1,1)+the_ex[1]),
+							va="top", ha="left", fontsize=8)		
+					ax2.annotate("", xy=(0, datetime.datetime(2000,1,1)+the_ex[1]), xytext=(-150, datetime.datetime(2000,1,1)+the_ex[1]),
+							arrowprops=dict(arrowstyle="-", color="white", linewidth=0.8, relpos=(0, 1), zorder=5, shrinkA=0), va="top", ha="left")	
 						
 			
 			ax2.spines[["left"]].set_position(("axes",0.5))
