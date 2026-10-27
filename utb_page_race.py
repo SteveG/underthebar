@@ -463,7 +463,6 @@ if __name__ == "__main__":
 	
 	
 	
-
 	window = RaceMode("red")
 	window.do_update()
 	#window.setFixedSize(800,600)
@@ -471,3 +470,4 @@ if __name__ == "__main__":
 	window.show()
 
 	app.exec_()
+	
