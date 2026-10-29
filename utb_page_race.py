@@ -245,6 +245,8 @@ class RaceMode(QWidget):
 				return str(the_set["reps"])+"x"+str(round(the_set["weight_kg"]*2.20462262,2))
 		elif the_set["reps"]:
 			return "x" + str(the_set["reps"])
+		elif the_set["distance_meters"]:
+			return str(round(the_set["distance_meters"]/1000.0,2))
 		else:
 			return "set"
 			
@@ -292,6 +294,7 @@ class RaceMode(QWidget):
 		exercise_totals = {}
 		exercise_ends = {}
 		previous_completion = workout_date
+		previous_set_ex_idx = None
 
 		for s in flat_sets:
 			ex_idx = s["exercise_index"]
@@ -303,14 +306,21 @@ class RaceMode(QWidget):
 
 			exercise_totals[ex_idx] += delta
 			exercise_ends[ex_idx] = s["from_start"]
+			
+			planned_rest = datetime.timedelta(0)
+			if previous_set_ex_idx is not None:
+				previous_exercise = temp_data["exercises"][previous_set_ex_idx]
+				planned_rest = datetime.timedelta(seconds=int(previous_exercise.get("rest_seconds") or 0))
 
 			plot_sets.append((
 				s["label"],
 				s["from_start"],
 				delta,
-				0,
+				planned_rest,
 				"normal",
 			))
+			
+			previous_set_ex_idx = ex_idx
 
 			sid = temp_data["exercises"][ex_idx].get("superset_id")
 			if sid is not None:
@@ -452,6 +462,9 @@ class RaceMode(QWidget):
 			for the_set in plot1sets:
 				ax1.annotate(the_set[0], xy=(0, datetime.datetime(2000,1,1)+the_set[1]), xytext=(the_set[2].total_seconds()/max_set_time1.total_seconds()*140, datetime.datetime(2000,1,1)+the_set[1]),
 						arrowprops=dict(arrowstyle="-", color="white", linewidth=0.8), va="center", fontsize=6)
+				ax1.annotate("", xy=(0, datetime.datetime(2000,1,1)+the_set[1]), xytext=(min(the_set[2].total_seconds(),the_set[3].total_seconds())/max_set_time1.total_seconds()*140, datetime.datetime(2000,1,1)+the_set[1]),
+						arrowprops=dict(arrowstyle="<|-", color="white", linewidth=0.8, alpha=1.0), va="center", fontsize=6)
+				#print("minimum rest time", min(the_set[2].total_seconds(),the_set[3].total_seconds()))
 						
 			for the_ex in plot1exercises:
 				#ax.annotate(the_ex[0], xy=(0, datetime.datetime(2000,1,1)+the_ex[1]), xytext=(-50-the_ex[2].total_seconds()/max_exercise_time*100, datetime.datetime(2000,1,1)+the_ex[1]),
@@ -461,7 +474,7 @@ class RaceMode(QWidget):
 					ax1.annotate(the_ex[0], xy=(0, datetime.datetime(2000,1,1)+the_ex[1]), xytext=(-50, datetime.datetime(2000,1,1)+the_ex[1]),
 							va="top", ha="left", fontsize=8)		
 					ax1.annotate("", xy=(0, datetime.datetime(2000,1,1)+the_ex[1]), xytext=(-50, datetime.datetime(2000,1,1)+the_ex[1]),
-							arrowprops=dict(arrowstyle="-", color="white", linewidth=0.8, relpos=(0, 1), zorder=5, shrinkA=0), va="top", ha="left")
+							arrowprops=dict(arrowstyle="-", color="white", linewidth=0.8, relpos=(0, 1), zorder=5, alpha=0.5, shrinkA=0), va="top", ha="left")
 				else:
 				
 					ax1.annotate(the_ex[0], xy=(0, datetime.datetime(2000,1,1)+the_ex[1]), xytext=(-150, datetime.datetime(2000,1,1)+the_ex[1]),
@@ -487,6 +500,8 @@ class RaceMode(QWidget):
 			for the_set in plot2sets:
 				ax2.annotate(the_set[0], xy=(0, datetime.datetime(2000,1,1)+the_set[1]), xytext=(the_set[2].total_seconds()/max_set_time2.total_seconds()*140, datetime.datetime(2000,1,1)+the_set[1]),
 						arrowprops=dict(arrowstyle="-", color="white", linewidth=0.8), va="center", fontsize=6)
+				ax2.annotate("", xy=(0, datetime.datetime(2000,1,1)+the_set[1]), xytext=(min(the_set[2].total_seconds(),the_set[3].total_seconds())/max_set_time2.total_seconds()*140, datetime.datetime(2000,1,1)+the_set[1]),
+						arrowprops=dict(arrowstyle="<|-", color="white", linewidth=0.8, alpha=1.0), va="center", fontsize=6)
 						
 			for the_ex in plot2exercises:
 				#ax.annotate(the_ex[0], xy=(0, datetime.datetime(2000,1,1)+the_ex[1]), xytext=(-50-the_ex[2].total_seconds()/max_exercise_time*100, datetime.datetime(2000,1,1)+the_ex[1]),
@@ -495,7 +510,7 @@ class RaceMode(QWidget):
 					ax2.annotate(the_ex[0], xy=(0, datetime.datetime(2000,1,1)+the_ex[1]), xytext=(-50, datetime.datetime(2000,1,1)+the_ex[1]),
 							va="top", ha="left", fontsize=8)		
 					ax2.annotate("", xy=(0, datetime.datetime(2000,1,1)+the_ex[1]), xytext=(-50, datetime.datetime(2000,1,1)+the_ex[1]),
-							arrowprops=dict(arrowstyle="-", color="white", linewidth=0.8, relpos=(0, 1), zorder=5, shrinkA=0), va="top", ha="left")	
+							arrowprops=dict(arrowstyle="-", color="white", linewidth=0.8, relpos=(0, 1), zorder=5, alpha=0.5, shrinkA=0), va="top", ha="left")	
 				else:
 					ax2.annotate(the_ex[0], xy=(0, datetime.datetime(2000,1,1)+the_ex[1]), xytext=(-150, datetime.datetime(2000,1,1)+the_ex[1]),
 							va="top", ha="left", fontsize=8)		
@@ -517,6 +532,17 @@ class RaceMode(QWidget):
 		ax2.xaxis.set_visible(False)
 		ax1.grid(False)		
 		ax2.grid(False)
+		
+		footnotetext = ""
+		if self.weight_unit == "kg":
+			footnotetext += "Weight in kg"
+		else:
+			footnotetext += "Weight in lb"
+		if self.distance_unit == "kilometers":
+			footnotetext += ", Distance in km"
+		else:
+			footnotetext += ", Distance in miles"
+		plt.figtext(0.99, 0.01, footnotetext, ha="right", fontsize=6, style="italic")
 		
 		plt.tight_layout()
 		fig = plt.gcf()

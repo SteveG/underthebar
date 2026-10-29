@@ -69,6 +69,7 @@ class Profile(QWidget):
 		
 		self.pool = QThreadPool()
 		self.initialised = False
+		self.feed_loading = False
 	
 	def initialise(self):
 		#print("Drawing profile page")
@@ -1117,6 +1118,8 @@ class Profile(QWidget):
 		
 	
 	def feed_load_button(self):
+		if self.feed_loading:
+			return
 		self.feedreloadbutton.setEnabled(False)
 		self.feedloadbutton.setEnabled(False)
 		start_index = self.feed_last_index + 0
@@ -1134,6 +1137,8 @@ class Profile(QWidget):
 		#worker.emitter.done.connect(self.on_feed_worker_done)
 		self.workemit = worker.emitter
 		self.workemit.done.connect(self.on_feed_worker_done)
+		
+		self.feed_loading = True
 		self.pool.start(worker)
 		
 	# Swaps the text and whatsthis text of the particular list item, to swap between short and long text versions
@@ -1333,6 +1338,7 @@ class Profile(QWidget):
 		
 		self.feedreloadbutton.setEnabled(True)
 		self.feedloadbutton.setEnabled(True)
+		self.feed_loading = False
 		
 		if not self.feedList.verticalScrollBar().isVisible() and self.feed_last_index !=0:
 			self.feed_load_button()

@@ -72,6 +72,7 @@ class Social(QWidget):
 		
 		self.pool = QThreadPool()
 		self.initialised = False
+		self.feed_request_id=0
 	
 	def initialise(self):
 		#print("Drawing profile page")
@@ -1339,24 +1340,33 @@ The changes are from when you last reloaded the data using this button"""
 		self.pool.start(worker)
 	
 	def feed_reload_button(self):
+		self.feed_request_id += 1
+		request_id = self.feed_request_id
+		
+		self.pool.clear()
+		self.feedloading = False
+		
 		self.feed_last_index = 0
 		self.feedList.clear()
-		self.feed_load_button()
+		self.feed_load_button(request_id)
 		#self.feed_load_button()
 		#self.feed_load_button()
 		
 		# load the profile
-		nextworker = ProfileWorker(self.current_user)
+		nextworker = ProfileWorker(self.current_user, request_id)
 		self.nextworkeremit = nextworker.emitter
 		self.nextworkeremit.done.connect(self.on_profile_worker_done)
 		self.pool.start(nextworker)
 		
 	
-	def feed_load_button(self):
+	def feed_load_button(self, request_id=None):
+		if request_id is None:
+			request_id = self.feed_request_id
+		
 		#self.feedreloadbutton.setEnabled(False)
 		#self.feedloadbutton.setEnabled(False)
 		start_index = self.feed_last_index + 0
-		worker = MyFeedWorker(start_index, self.current_user)
+		worker = MyFeedWorker(start_index, self.current_user, request_id)
 		
 		### The line below was creating a segmentation fault, found this: https://stackoverflow.com/questions/29123171/segmentation-fault-when-connecting-a-signal-and-a-slot
 		#worker.emitter.done.connect(self.on_feed_worker_done)
@@ -1407,9 +1417,16 @@ The changes are from when you last reloaded the data using this button"""
 		self.friendList.clear()
 		self.friendList.addItems(the_users)
 		
-	@Slot(dict)
-	def on_profile_worker_done(self, the_data):
-		print("all the work is done")
+	@Slot(object)
+	def on_profile_worker_done(self, payload):
+		#print("on_profile_worker_done done", payload)
+		if not isinstance(payload, tuple) or len(payload)!=2:
+			return
+		request_id, the_data = payload
+		print("profile ready", request_id, self.feed_request_id)
+		if request_id != self.feed_request_id:
+			return
+			
 		#print(the_data)
 		# try:
 		the_string = ""
@@ -1464,8 +1481,17 @@ The changes are from when you last reloaded the data using this button"""
 		item.setWhatsThis(item.text())
 		item.setText(tempText)
 	
-	@Slot(dict)
-	def on_feed_worker_done(self, returnjson):
+	@Slot(object)
+	def on_feed_worker_done(self, payload):
+	
+		if not isinstance(payload, tuple) or len(payload) != 2:
+			return
+			
+		request_id, returnjson = payload
+		print("feed is ready", request_id, self.feed_request_id)
+		if request_id != self.feed_request_id:
+			return
+		
 		# modify the UI
 		if returnjson != 304:
 			#self.feedList.addItem(json.dumps(returnjson, indent=4, sort_keys=False))
@@ -1789,19 +1815,20 @@ class ReloadWorker(QRunnable):
 
 class ProfileEmitter(QObject):
 	# setting up custom signal
-	done = Signal(dict)
+	done = Signal(object)
 
 class ProfileWorker(QRunnable):
 
-	def __init__(self, the_user):
+	def __init__(self, the_user, request_id):
 		super(ProfileWorker, self).__init__()
 		self.the_user = the_user
+		self.request_id = request_id
 		self.emitter = ProfileEmitter()
 
 	def run(self):
 		#returnjson = hevy_api.feed_workouts_paged(self.start_from, user=self.feed_user)
 		the_data = hevy_api.get_user_profile(self.the_user)
-		self.emitter.done.emit(the_data)
+		self.emitter.done.emit((self.request_id, the_data))
 
 class SearchEmitter(QObject):
 	# setting up custom signal
@@ -1821,20 +1848,21 @@ class SearchWorker(QRunnable):
 
 class MyEmitter(QObject):
 	# setting up custom signal
-	done = Signal(dict)
+	done = Signal(object)
 
 class MyFeedWorker(QRunnable):
 
-	def __init__(self, start_from, feed_user):
+	def __init__(self, start_from, feed_user, request_id):
 		super(MyFeedWorker, self).__init__()
 
 		self.start_from = start_from + 0
 		self.feed_user = feed_user
+		self.request_id = request_id
 		self.emitter = MyEmitter()
 
 	def run(self):
 		returnjson = hevy_api.feed_workouts_paged(self.start_from, user=self.feed_user)
-		self.emitter.done.emit(returnjson)
+		self.emitter.done.emit((self.request_id, returnjson))
 
 class LikeEmitter(QObject):
 	# setting up custom signal
