@@ -248,7 +248,7 @@ class RaceMode(QWidget):
 		elif the_set["distance_meters"]:
 			if self.distance_unit == "kilometers":
 				return str(round(the_set["distance_meters"]/1000.0,2))
-			else
+			else:
 				return str(round(the_set["distance_meters"]/1609.344,2))
 		else:
 			return "set"
