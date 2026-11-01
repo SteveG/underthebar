@@ -1362,6 +1362,8 @@ The changes are from when you last reloaded the data using this button"""
 	def feed_load_button(self, request_id=None):
 		if request_id is None:
 			request_id = self.feed_request_id
+		if self.feedloading:
+			return # don't start a new worker if one is already going...
 		
 		#self.feedreloadbutton.setEnabled(False)
 		#self.feedloadbutton.setEnabled(False)
@@ -1483,197 +1485,201 @@ The changes are from when you last reloaded the data using this button"""
 	
 	@Slot(object)
 	def on_feed_worker_done(self, payload):
-	
-		if not isinstance(payload, tuple) or len(payload) != 2:
-			return
+		try:
+			if not isinstance(payload, tuple) or len(payload) != 2:
+				return
+				
+			request_id, returnjson = payload
+			print("feed is ready", request_id, self.feed_request_id)
+			if request_id != self.feed_request_id:
+				return
 			
-		request_id, returnjson = payload
-		print("feed is ready", request_id, self.feed_request_id)
-		if request_id != self.feed_request_id:
-			return
-		
-		# modify the UI
-		if returnjson != 304:
-			#self.feedList.addItem(json.dumps(returnjson, indent=4, sort_keys=False))
-			for workout in returnjson["data"]["workouts"]:
-				#fancystring = workout["username"] + " - " + workout["name"]
-				fancystring = workout["name"]
-				fancystring_short = workout["name"]
-				
-				workout_date = datetime.datetime.utcfromtimestamp(workout["start_time"])
-				workout_date = workout_date.replace(tzinfo=datetime.timezone.utc).astimezone(tz=None)
-				import platform
-				if platform.system() == "Linux":
-					fancystring += "\n" + workout_date.strftime("%a %b %-d %I%p, ").replace(" 0"," ") + str(len(workout["exercises"])) + " exercises"
-					fancystring_short += "\n" + workout_date.strftime("%a %b %-d %I%p, ").replace(" 0"," ") + str(len(workout["exercises"])) + " exercises"
-				else:
-					fancystring += "\n" + workout_date.strftime("%a %b %#d %I%p, ").replace(" 0"," ") + str(len(workout["exercises"])) + " exercises"
-					fancystring_short += "\n" + workout_date.strftime("%a %b %#d %I%p, ").replace(" 0"," ") + str(len(workout["exercises"])) + " exercises\n"
-				
-				
-				the_superset_id = None
-				ss_string = ""
-				for exercise in workout["exercises"]:
-					if exercise["superset_id"] != None:
-						ss_string = "|"
-						if exercise["superset_id"] != the_superset_id:
-							the_superset_id = exercise["superset_id"]
-							fancystring += "\n\nSuper Set "+str(the_superset_id+1)
-							fancystring_short += "\nSuper Set "+str(the_superset_id+1)
-						else:
-							fancystring += "\n"+ss_string
-					else:
-						ss_string = ""
-						fancystring += "\n"+ss_string
-					fancystring += "\n"+ss_string+"    " + exercise["title"]
-					fancystring_short += "\n"+ss_string+"    " + str(len(exercise["sets"])) + "x " + exercise["title"]
-					
-					has_weight = False
-					has_reps = False
-					has_distance = False
-					has_duration = False
-					
-					# loop twice, first to decide format, then to write it out
-					for exercise_set in exercise["sets"]:
-						#fancystring += "\n        "+str(exercise_set["index"]+1)+":\t"
-						if exercise_set["weight_kg"] != 0 and exercise_set["weight_kg"] != None:
-							#fancystring += str(exercise_set["weight_kg"])+"kg\t"
-							has_weight = True
-						if exercise_set["reps"] != 0 and exercise_set["reps"] != None:
-							#fancystring += str(exercise_set["reps"])+" reps\t"
-							has_reps = True
-						if exercise_set["distance_meters"] != 0 and exercise_set["distance_meters"] != None:
-							#fancystring += str(exercise_set["distance_meters"])+"m\t"
-							has_distance = True
-						if exercise_set["duration_seconds"] != 0 and exercise_set["duration_seconds"] != None:
-							#fancystring += str(exercise_set["duration_seconds"])+"s\t"
-							has_duration = True
-						#print(exercise_set)
-					for exercise_set in exercise["sets"]:
-						fancystring += "\n"+ss_string+"        "+str(exercise_set["index"]+1)+":\t"
-						if has_weight:
-							if self.weight_unit == "lbs":
-								lb = round(exercise_set["weight_kg"]*2.20462262,2)
-								if lb.is_integer():
-									lb = int(lb)
-								fancystring += str(lb)+"lbs\t"
-							else:
-								fancystring += str(round(exercise_set["weight_kg"],2))+"kg\t"
-						if has_reps:
-							fancystring += str(exercise_set["reps"])+" reps\t"
-						if has_distance:
-							if exercise_set["distance_meters"] < 1000:
-								fancystring += str(exercise_set["distance_meters"])+"m\t"
-							else:
-								fancystring += str(exercise_set["distance_meters"]/1000)+"km\t"
-						if has_duration:
-							#fancystring += str(datetime.timedelta(seconds=exercise_set["duration_seconds"]))+"\t"
-							m, s = divmod(exercise_set["duration_seconds"], 60) 
-							time_format = "{:02d}:{:02d}".format(m, s) 
-							if m>59:
-								h,m = divmod(m, 60) 
-								time_format = "{:02d}:{:02d}:{:02d}".format(h, m, s) 
-							fancystring += time_format+"\t"
-				fancystring += "\n"
-				fancystring_short += "\n"
-				
-				itemtoadd = QListWidgetItem(fancystring_short)
-				itemtoadd.setWhatsThis(fancystring)
-				itemtoadd.setToolTip(textwrap.fill(workout["description"],50))
-				self.feedList.addItem(itemtoadd)
-				#self.feedList.addItem(fancystring)
-				#self.feedList.addItem("")
-				
-				
-
-				
-				
-				item = QListWidgetItem()
-				internalWidget = QWidget()
-				internalLayout = QHBoxLayout()
-				likebutton = QToolButton()
-				likebutton.setIcon(self.loadIcon(self.script_folder+"/icons/thumbs-up-solid.svg"))
-				likebutton.setCheckable(True)
-				likebutton.setChecked(False)
-				
-				internalLayout.addWidget(likebutton)
-				counterLabel = QLabel(str(workout["like_count"]))
-				#counterLabel.setToolTip('<img src="https://b.thumbs.redditmedia.com/wjrOwbynl7LAxh4UACgPS4MBu3vjUXanM_NBsxixtys.jpg" width="100">')
-				#counterLabel.setToolTip('<img src="test.jpg" width="400">')
-				internalLayout.addWidget(counterLabel)
-				#internalLayout.addWidget(QLabel("prop(s)"))
-				
-				# Comments
-				commentbutton = StaticToggleButton()
-				commentbutton.setIcon(self.loadIcon(self.script_folder+"/icons/comment-solid-full.svg"))
-				commentbutton.setCheckable(True)
-				commentbutton.setChecked(False)
-				internalLayout.addWidget(commentbutton)
-				commentcount = len(workout["comments"])
-				if commentcount > 0:
-					commentbutton.setChecked(True)
-				commentcounter = QLabel(str(commentcount))
-				internalLayout.addWidget(commentcounter)
-				
-				
-				# add the workout pics
-				#for img_url in workout["image_urls"]:
-				#	filename = img_url.split("/")[-1]
-				#	img_folder = str(Path.home())+ "/.underthebar/temp/"
-				#	#if os.path.exists(img_folder+filename): # following three lines were under this if, but now image might not be downloaded immediately
-				#	pic_label = QLabel("Picture ")
-				#	pic_label.setToolTip('<img src="'+img_folder+filename+'" width="400">')
-				#	internalLayout.addWidget(pic_label)
-					
-				for media in workout["media"]:
-					if media["type"] == "image":
-						filename = media["url"].split("/")[-1]
-						img_folder = str(Path.home())+ "/.underthebar/temp/"
-						#if os.path.exists(img_folder+filename): # following three lines were under this if, but now image might not be downloaded immediately
-						pic_label = QLabel("Picture ")
-						pic_label.setToolTip('<img src="'+img_folder+filename+'" width="400">')
-						internalLayout.addWidget(pic_label)
-					elif media["type"] == "video":
-						filename = media["thumbnail_url"].split("/")[-1]
-						img_folder = str(Path.home())+ "/.underthebar/temp/"
-						#if os.path.exists(img_folder+filename): # following three lines were under this if, but now image might not be downloaded immediately
-						pic_label = QPushButton("Video↗ ")
-						pic_label.setToolTip('<img src="'+img_folder+filename+'" height="400">')
-						pic_label.setStyleSheet("border: none; padding: 0px; text-align: left;")
+			# modify the UI
+			if returnjson != 304:
+				#self.feedList.addItem(json.dumps(returnjson, indent=4, sort_keys=False))
+				for workout in returnjson["data"]["workouts"]:
 						
-						filename_video = media["url"].split("/")[-1]
-						url = img_folder + filename_video
-						pic_label.clicked.connect(lambda checked=False, val=url: QDesktopServices.openUrl(QUrl.fromLocalFile(val)))
-
-						internalLayout.addWidget(pic_label)
+					#fancystring = workout["username"] + " - " + workout["name"]
+					fancystring = workout["name"]
+					fancystring_short = workout["name"]
 					
-				internalLayout.addStretch()
-				internalLayout.setContentsMargins(0,0,0,0)
-				internalWidget.setLayout(internalLayout)
-				
-				
-				likebutton.setFixedWidth(25)
-				commentbutton.setFixedWidth(25)
-				#item.setWidget(internalWidget)
-				#item.setText("\n\"sick workout dude\" - a guy\n\n\"awesome!!!\" - a hot chick")
-				#item.setText(str(workout["like_count"])+ " prop(s)")
-				#item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
-				#item.setCheckState(Qt.Unchecked)
-				if workout["is_liked_by_user"]:
-					likebutton.setChecked(True)
-				item.setSizeHint(internalWidget.sizeHint())   
-				self.feedList.addItem(item)
-				self.feedList.setItemWidget(item, internalWidget)
-				
-				
-				likebutton.clicked.connect(lambda *args, x=workout["id"], y=likebutton, z=counterLabel: self.like_button(args, x,y,z))
-				commentbutton.clicked.connect(lambda *args, x=workout["id"], y=commentbutton: self.comment_button(args, x, y))
-				#self.feed_last_index = workout["index"]
-				self.feed_last_index +=1 # For other users its a workouts offset rather than the index
-		
+					workout_date = datetime.datetime.utcfromtimestamp(workout["start_time"])
+					workout_date = workout_date.replace(tzinfo=datetime.timezone.utc).astimezone(tz=None)
+					import platform
+					if platform.system() == "Linux":
+						fancystring += "\n" + workout_date.strftime("%a %b %-d %I%p, ").replace(" 0"," ") + str(len(workout["exercises"])) + " exercises"
+						fancystring_short += "\n" + workout_date.strftime("%a %b %-d %I%p, ").replace(" 0"," ") + str(len(workout["exercises"])) + " exercises"
+					else:
+						fancystring += "\n" + workout_date.strftime("%a %b %#d %I%p, ").replace(" 0"," ") + str(len(workout["exercises"])) + " exercises"
+						fancystring_short += "\n" + workout_date.strftime("%a %b %#d %I%p, ").replace(" 0"," ") + str(len(workout["exercises"])) + " exercises\n"
+					
+					
+					the_superset_id = None
+					ss_string = ""
+					for exercise in workout["exercises"]:
+						if exercise["superset_id"] != None:
+							ss_string = "|"
+							if exercise["superset_id"] != the_superset_id:
+								the_superset_id = exercise["superset_id"]
+								fancystring += "\n\nSuper Set "+str(the_superset_id+1)
+								fancystring_short += "\nSuper Set "+str(the_superset_id+1)
+							else:
+								fancystring += "\n"+ss_string
+						else:
+							ss_string = ""
+							fancystring += "\n"+ss_string
+						fancystring += "\n"+ss_string+"    " + exercise["title"]
+						fancystring_short += "\n"+ss_string+"    " + str(len(exercise["sets"])) + "x " + exercise["title"]
+						
+						has_weight = False
+						has_reps = False
+						has_distance = False
+						has_duration = False
+						
+						# loop twice, first to decide format, then to write it out
+						for exercise_set in exercise["sets"]:
+							#fancystring += "\n        "+str(exercise_set["index"]+1)+":\t"
+							if exercise_set["weight_kg"] != 0 and exercise_set["weight_kg"] != None:
+								#fancystring += str(exercise_set["weight_kg"])+"kg\t"
+								has_weight = True
+							if exercise_set["reps"] != 0 and exercise_set["reps"] != None:
+								#fancystring += str(exercise_set["reps"])+" reps\t"
+								has_reps = True
+							if exercise_set["distance_meters"] != 0 and exercise_set["distance_meters"] != None:
+								#fancystring += str(exercise_set["distance_meters"])+"m\t"
+								has_distance = True
+							if exercise_set["duration_seconds"] != 0 and exercise_set["duration_seconds"] != None:
+								#fancystring += str(exercise_set["duration_seconds"])+"s\t"
+								has_duration = True
+							#print(exercise_set)
+						for exercise_set in exercise["sets"]:
+							fancystring += "\n"+ss_string+"        "+str(exercise_set["index"]+1)+":\t"
+							if has_weight:
+								if self.weight_unit == "lbs":
+									lb = round(exercise_set["weight_kg"]*2.20462262,2)
+									if lb.is_integer():
+										lb = int(lb)
+									fancystring += str(lb)+"lbs\t"
+								else:
+									fancystring += str(round(exercise_set["weight_kg"],2))+"kg\t"
+							if has_reps:
+								fancystring += str(exercise_set["reps"])+" reps\t"
+							if has_distance:
+								if exercise_set["distance_meters"] < 1000:
+									fancystring += str(exercise_set["distance_meters"])+"m\t"
+								else:
+									fancystring += str(exercise_set["distance_meters"]/1000)+"km\t"
+							if has_duration:
+								#fancystring += str(datetime.timedelta(seconds=exercise_set["duration_seconds"]))+"\t"
+								m, s = divmod(exercise_set["duration_seconds"], 60) 
+								time_format = "{:02d}:{:02d}".format(m, s) 
+								if m>59:
+									h,m = divmod(m, 60) 
+									time_format = "{:02d}:{:02d}:{:02d}".format(h, m, s) 
+								fancystring += time_format+"\t"
+					fancystring += "\n"
+					fancystring_short += "\n"
+					
+					itemtoadd = QListWidgetItem(fancystring_short)
+					itemtoadd.setWhatsThis(fancystring)
+					itemtoadd.setToolTip(textwrap.fill(workout["description"],50))
+					self.feedList.addItem(itemtoadd)
+					#self.feedList.addItem(fancystring)
+					#self.feedList.addItem("")
+					
+					
+
+					
+					
+					item = QListWidgetItem()
+					internalWidget = QWidget()
+					internalLayout = QHBoxLayout()
+					likebutton = QToolButton()
+					likebutton.setIcon(self.loadIcon(self.script_folder+"/icons/thumbs-up-solid.svg"))
+					likebutton.setCheckable(True)
+					likebutton.setChecked(False)
+					
+					internalLayout.addWidget(likebutton)
+					counterLabel = QLabel(str(workout["like_count"]))
+					#counterLabel.setToolTip('<img src="https://b.thumbs.redditmedia.com/wjrOwbynl7LAxh4UACgPS4MBu3vjUXanM_NBsxixtys.jpg" width="100">')
+					#counterLabel.setToolTip('<img src="test.jpg" width="400">')
+					internalLayout.addWidget(counterLabel)
+					#internalLayout.addWidget(QLabel("prop(s)"))
+					
+					# Comments
+					commentbutton = StaticToggleButton()
+					commentbutton.setIcon(self.loadIcon(self.script_folder+"/icons/comment-solid-full.svg"))
+					commentbutton.setCheckable(True)
+					commentbutton.setChecked(False)
+					internalLayout.addWidget(commentbutton)
+					commentcount = len(workout["comments"])
+					if commentcount > 0:
+						commentbutton.setChecked(True)
+					commentcounter = QLabel(str(commentcount))
+					internalLayout.addWidget(commentcounter)
+					
+					
+					# add the workout pics
+					#for img_url in workout["image_urls"]:
+					#	filename = img_url.split("/")[-1]
+					#	img_folder = str(Path.home())+ "/.underthebar/temp/"
+					#	#if os.path.exists(img_folder+filename): # following three lines were under this if, but now image might not be downloaded immediately
+					#	pic_label = QLabel("Picture ")
+					#	pic_label.setToolTip('<img src="'+img_folder+filename+'" width="400">')
+					#	internalLayout.addWidget(pic_label)
+						
+					for media in workout["media"]:
+						if media["type"] == "image":
+							filename = media["url"].split("/")[-1]
+							img_folder = str(Path.home())+ "/.underthebar/temp/"
+							#if os.path.exists(img_folder+filename): # following three lines were under this if, but now image might not be downloaded immediately
+							pic_label = QLabel("Picture ")
+							pic_label.setToolTip('<img src="'+img_folder+filename+'" width="400">')
+							internalLayout.addWidget(pic_label)
+						elif media["type"] == "video":
+							filename = media["thumbnail_url"].split("/")[-1]
+							img_folder = str(Path.home())+ "/.underthebar/temp/"
+							#if os.path.exists(img_folder+filename): # following three lines were under this if, but now image might not be downloaded immediately
+							pic_label = QPushButton("Video↗ ")
+							pic_label.setToolTip('<img src="'+img_folder+filename+'" height="400">')
+							pic_label.setStyleSheet("border: none; padding: 0px; text-align: left;")
+							
+							filename_video = media["url"].split("/")[-1]
+							url = img_folder + filename_video
+							pic_label.clicked.connect(lambda checked=False, val=url: QDesktopServices.openUrl(QUrl.fromLocalFile(val)))
+
+							internalLayout.addWidget(pic_label)
+						
+					internalLayout.addStretch()
+					internalLayout.setContentsMargins(0,0,0,0)
+					internalWidget.setLayout(internalLayout)
+					
+					
+					likebutton.setFixedWidth(25)
+					commentbutton.setFixedWidth(25)
+					#item.setWidget(internalWidget)
+					#item.setText("\n\"sick workout dude\" - a guy\n\n\"awesome!!!\" - a hot chick")
+					#item.setText(str(workout["like_count"])+ " prop(s)")
+					#item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
+					#item.setCheckState(Qt.Unchecked)
+					if workout["is_liked_by_user"]:
+						likebutton.setChecked(True)
+					item.setSizeHint(internalWidget.sizeHint())   
+					self.feedList.addItem(item)
+					self.feedList.setItemWidget(item, internalWidget)
+					
+					
+					likebutton.clicked.connect(lambda *args, x=workout["id"], y=likebutton, z=counterLabel: self.like_button(args, x,y,z))
+					commentbutton.clicked.connect(lambda *args, x=workout["id"], y=commentbutton: self.comment_button(args, x, y))
+					#self.feed_last_index = workout["index"]
+					self.feed_last_index +=1 # For other users its a workouts offset rather than the index
+		except Exception as exc:
+			print("on_feed_worker_done failed:", exc)
+		finally:
+			self.feedloading = False
 		#self.feedreloadbutton.setEnabled(True)
 		#self.feedloadbutton.setEnabled(True)
-		self.feedloading = False
+		
 	
 	def like_button(self, checked, workout_id, button, label):
 		#print(checked, workout_id, button.isChecked())

@@ -250,6 +250,9 @@ class RaceMode(QWidget):
 				return str(round(the_set["distance_meters"]/1000.0,2))
 			else:
 				return str(round(the_set["distance_meters"]/1609.344,2))
+		elif the_set["duration_seconds"]:
+			thedelta = datetime.timedelta(seconds=the_set["duration_seconds"])
+			return str(thedelta).split('.')[0].lstrip('0:')
 		else:
 			return "set"
 			
@@ -463,7 +466,7 @@ class RaceMode(QWidget):
 			#ax.set_ylim(datetime.datetime(2000,1,1), datetime.datetime(2000,1,1)+end_time+end_time)
 			
 			for the_set in plot1sets:
-				ax1.annotate(the_set[0], xy=(0, datetime.datetime(2000,1,1)+the_set[1]), xytext=(the_set[2].total_seconds()/max_set_time1.total_seconds()*140, datetime.datetime(2000,1,1)+the_set[1]),
+				ax1.annotate(the_set[0]+","+str(the_set[2]).split('.')[0].lstrip('0:'), xy=(0, datetime.datetime(2000,1,1)+the_set[1]), xytext=(the_set[2].total_seconds()/max_set_time1.total_seconds()*140, datetime.datetime(2000,1,1)+the_set[1]),
 						arrowprops=dict(arrowstyle="-", color="white", linewidth=0.8), va="center", fontsize=6)
 				ax1.annotate("", xy=(0, datetime.datetime(2000,1,1)+the_set[1]), xytext=(min(the_set[2].total_seconds(),the_set[3].total_seconds())/max_set_time1.total_seconds()*140, datetime.datetime(2000,1,1)+the_set[1]),
 						arrowprops=dict(arrowstyle="<|-", color="white", linewidth=0.8, alpha=1.0), va="center", fontsize=6)
@@ -501,7 +504,7 @@ class RaceMode(QWidget):
 			#ax.set_ylim(datetime.datetime(2000,1,1), datetime.datetime(2000,1,1)+end_time+end_time)
 			
 			for the_set in plot2sets:
-				ax2.annotate(the_set[0], xy=(0, datetime.datetime(2000,1,1)+the_set[1]), xytext=(the_set[2].total_seconds()/max_set_time2.total_seconds()*140, datetime.datetime(2000,1,1)+the_set[1]),
+				ax2.annotate(the_set[0]+","+str(the_set[2]).split('.')[0].lstrip('0:'), xy=(0, datetime.datetime(2000,1,1)+the_set[1]), xytext=(the_set[2].total_seconds()/max_set_time2.total_seconds()*140, datetime.datetime(2000,1,1)+the_set[1]),
 						arrowprops=dict(arrowstyle="-", color="white", linewidth=0.8), va="center", fontsize=6)
 				ax2.annotate("", xy=(0, datetime.datetime(2000,1,1)+the_set[1]), xytext=(min(the_set[2].total_seconds(),the_set[3].total_seconds())/max_set_time2.total_seconds()*140, datetime.datetime(2000,1,1)+the_set[1]),
 						arrowprops=dict(arrowstyle="<|-", color="white", linewidth=0.8, alpha=1.0), va="center", fontsize=6)
